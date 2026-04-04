@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mindguardians.data.FirebaseRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -38,6 +39,8 @@ val MONSTERS = listOf(
 
 class GameViewModel : ViewModel() {
 
+    private val repository = FirebaseRepository()
+
     var heroHp          by mutableIntStateOf(100)
     var heroLevel       by mutableIntStateOf(1)
     var heroXp          by mutableIntStateOf(0)
@@ -49,10 +52,28 @@ class GameViewModel : ViewModel() {
     var isVictory       by mutableStateOf(false)
     var menuOpen        by mutableStateOf(false)
     var currentScreen   by mutableStateOf(Screen.COMBAT)
+    var isLoadingUser   by mutableStateOf(true)
 
     val battleLog = mutableStateListOf<BattleMessage>()
 
     val currentMonster get() = MONSTERS[monsterIndex]
+
+    init {
+        loadUser()
+    }
+
+    private fun loadUser() {
+        viewModelScope.launch {
+            val data = repository.loadUserData()
+            if (data != null) {
+                heroLevel = (data["heroLevel"] as? Long)?.toInt() ?: 1
+                heroXp    = (data["heroXp"]    as? Long)?.toInt() ?: 0
+                heroGold  = (data["heroGold"]  as? Long)?.toInt() ?: 0
+                heroHp    = (data["heroHp"]    as? Long)?.toInt() ?: 100
+            }
+            isLoadingUser = false
+        }
+    }
 
     fun addLog(text: String, type: MessageType = MessageType.INFO) {
         battleLog.add(BattleMessage(System.currentTimeMillis().toString() + Math.random(), text, type))
@@ -87,6 +108,22 @@ class GameViewModel : ViewModel() {
         isVictory    = false
         monsterIndex = (monsterIndex + 1) % MONSTERS.size
         monsterHp    = MONSTERS[monsterIndex].maxHp
+
+        viewModelScope.launch {
+            repository.saveBattle(
+                habitType  = "Combate",
+                result     = "Victoria",
+                goldEarned = gold,
+                xpEarned   = xp,
+            )
+            repository.saveUserData(
+                heroLevel = heroLevel,
+                heroXp    = heroXp,
+                heroGold  = heroGold,
+                heroHp    = heroHp,
+                totalXp   = heroXp + (heroLevel - 1) * 100,
+            )
+        }
     }
 
     fun goldReward() = 20 + monsterIndex * 10

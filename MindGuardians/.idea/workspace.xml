@@ -9,10 +9,10 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b6797515-dd70-48f6-b6a7-1a1942f24c86" name="Changes" comment="Gitignore actualizado para evitar hacer commit de archivos cache gradle.">
+    <list default="true" id="b6797515-dd70-48f6-b6a7-1a1942f24c86" name="Changes" comment="Permiso añadido en AndroidManifest para poder dar acceso a internet">
       <change beforePath="$PROJECT_DIR$/../.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/mindguardians/GameState.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/mindguardians/GameState.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -176,12 +176,21 @@
       <option name="project" value="LOCAL" />
       <updated>1775267198260</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Permiso añadido en AndroidManifest para poder dar acceso a internet">
+      <option name="closed" value="true" />
+      <created>1775275018778</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1775275018778</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Gitignore actualizado para evitar hacer commit de archivos cache gradle." />
-    <option name="LAST_COMMIT_MESSAGE" value="Gitignore actualizado para evitar hacer commit de archivos cache gradle." />
+    <MESSAGE value="Permiso añadido en AndroidManifest para poder dar acceso a internet" />
+    <option name="LAST_COMMIT_MESSAGE" value="Permiso añadido en AndroidManifest para poder dar acceso a internet" />
   </component>
   <component name="play_dynamic_filters_status">
     <option name="appIdToCheckInfo">
