@@ -1,3 +1,15 @@
-# Default ignored files
-/shelf/
-/workspace.xml
+# Gradle
+.gradle/
+build/
+app/build/
+
+# Android Studio
+.idea/
+*.iml
+local.properties
+
+# Firebase
+google-services.json
+
+# OS
+.DS_Store
