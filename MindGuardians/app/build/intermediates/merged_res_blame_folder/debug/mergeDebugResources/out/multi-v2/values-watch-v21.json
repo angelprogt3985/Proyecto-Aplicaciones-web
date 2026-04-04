@@ -4,7 +4,7 @@
             "outputFile": "com.mindguardians.app-mergeDebugResources-53:/values-watch-v21/values-watch-v21.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\PabloUrbina\\.gradle\\caches\\9.0-milestone-1\\transforms\\8d4f0bfe5503c51c268922989f828c88\\transformed\\appcompat-1.7.0\\res\\values-watch-v21\\values-watch-v21.xml",
+                    "source": "C:\\Users\\angel\\.gradle\\caches\\9.0-milestone-1\\transforms\\8d4f0bfe5503c51c268922989f828c88\\transformed\\appcompat-1.7.0\\res\\values-watch-v21\\values-watch-v21.xml",
                     "from": {
                         "startLines": "2,6,10",
                         "startColumns": "4,4,4",
