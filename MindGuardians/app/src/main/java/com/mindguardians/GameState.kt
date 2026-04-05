@@ -7,25 +7,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.mindguardians.data.FirebaseRepository
 import com.mindguardians.data.GeminiRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-data class Monster(
-    val name: String,
-    val type: String,
-    val maxHp: Int,
-)
-
-data class BattleMessage(
-    val id: String,
-    val text: String,
-    val type: MessageType,
-)
+data class Monster(val name: String, val type: String, val maxHp: Int)
+data class BattleMessage(val id: String, val text: String, val type: MessageType)
 
 enum class MessageType { DAMAGE, REWARD, INFO }
-
 enum class Screen { COMBAT, DASHBOARD, SHOP, RANKING, ORACLE }
 
 val MONSTERS = listOf(
@@ -43,6 +34,11 @@ class GameViewModel : ViewModel() {
     var heroLevel     by mutableIntStateOf(1)
     var heroXp        by mutableIntStateOf(0)
     var heroGold      by mutableIntStateOf(0)
+    var heroName      by mutableStateOf(
+        // Leer nombre inmediatamente de Firebase Auth (sin esperar Firestore)
+        FirebaseAuth.getInstance().currentUser?.displayName
+            ?.takeIf { it.isNotBlank() } ?: "Guerrero"
+    )
 
     var monsterIndex  by mutableIntStateOf(0)
     var monsterHp     by mutableIntStateOf(MONSTERS[0].maxHp)
@@ -75,6 +71,10 @@ class GameViewModel : ViewModel() {
                 heroXp    = (data["heroXp"]    as? Long)?.toInt() ?: 0
                 heroGold  = (data["heroGold"]  as? Long)?.toInt() ?: 0
                 heroHp    = (data["heroHp"]    as? Long)?.toInt() ?: 100
+                // Prioridad: Firestore > Firebase Auth > fallback
+                val nameFromFirestore = (data["displayName"] as? String)?.takeIf { it.isNotBlank() }
+                val nameFromAuth = FirebaseAuth.getInstance().currentUser?.displayName?.takeIf { it.isNotBlank() }
+                heroName = nameFromFirestore ?: nameFromAuth ?: "Guerrero"
             }
             isLoadingUser = false
         }
@@ -90,12 +90,9 @@ class GameViewModel : ViewModel() {
                 geminiRepository.consultOracle(userMessage)
             } catch (e: Exception) {
                 oracleError = "Error al contactar al Oráculo. Intenta de nuevo."
-                /* oracleError = e.message ?: e.toString() */
                 null
             }
-            if (reply != null) {
-                oracleMessages.add(Pair("oracle", reply))
-            }
+            if (reply != null) oracleMessages.add(Pair("oracle", reply))
             isOracleLoading = false
         }
     }
@@ -126,21 +123,13 @@ class GameViewModel : ViewModel() {
         val xp   = 30 + monsterIndex * 15
         heroGold += gold
         heroXp   += xp
-        if (heroXp >= 100) {
-            heroLevel++
-            heroXp -= 100
-        }
+        if (heroXp >= 100) { heroLevel++; heroXp -= 100 }
         isVictory    = false
         monsterIndex = (monsterIndex + 1) % MONSTERS.size
         monsterHp    = MONSTERS[monsterIndex].maxHp
 
         viewModelScope.launch {
-            repository.saveBattle(
-                habitType  = "Combate",
-                result     = "Victoria",
-                goldEarned = gold,
-                xpEarned   = xp,
-            )
+            repository.saveBattle("Combate", "Victoria", gold, xp)
             repository.saveUserData(
                 heroLevel = heroLevel,
                 heroXp    = heroXp,

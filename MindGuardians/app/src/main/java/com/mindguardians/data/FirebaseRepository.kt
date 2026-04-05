@@ -13,6 +13,36 @@ class FirebaseRepository {
     val currentUserId: String?
         get() = auth.currentUser?.uid
 
+    // ── Verifica si el displayName ya está en uso por otro usuario ────────────
+    suspend fun isDisplayNameTaken(displayName: String): Boolean {
+        val snapshot = db.collection("users")
+            .whereEqualTo("displayName", displayName)
+            .limit(1)
+            .get()
+            .await()
+        return !snapshot.isEmpty
+    }
+
+    // ── Crear perfil al registrarse (solo si no existe aún) ───────────────────
+    suspend fun createUserProfile(displayName: String) {
+        val uid   = currentUserId ?: return
+        val email = auth.currentUser?.email ?: ""
+
+        val exists = db.collection("users").document(uid).get().await().exists()
+        if (exists) return // ya tiene perfil, no sobreescribir
+
+        val data = mapOf(
+            "displayName" to displayName,
+            "email"       to email,
+            "heroLevel"   to 1,
+            "heroXp"      to 0,
+            "heroGold"    to 0,
+            "heroHp"      to 100,
+            "totalXp"     to 0,
+        )
+        db.collection("users").document(uid).set(data).await()
+    }
+
     suspend fun loadUserData(): Map<String, Any>? {
         val uid = currentUserId ?: return null
         val snapshot = db.collection("users").document(uid).get().await()

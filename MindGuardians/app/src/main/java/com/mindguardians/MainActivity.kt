@@ -1,4 +1,3 @@
-
 package com.mindguardians
 
 import android.os.Bundle
@@ -58,89 +57,118 @@ private enum class AuthScreen { LOGIN, REGISTER }
 
 // ─── APP ROOT ────────────────────────────────────────────────────────────────
 @Composable
-fun MindGuardiansApp(vm: GameViewModel = viewModel()) {
+fun MindGuardiansApp() {
 
-    // Verificar si el usuario ya tiene sesión activa
-    val currentUser = remember { FirebaseAuth.getInstance().currentUser }
-    var isLoggedIn by remember { mutableStateOf(currentUser != null) }
+    var sessionKey by remember { mutableIntStateOf(0) }
+    var isLoggedIn by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser != null) }
     var authScreen by remember { mutableStateOf(AuthScreen.LOGIN) }
 
+    val doLogout = {
+        FirebaseAuth.getInstance().signOut()
+        isLoggedIn = false
+        authScreen = AuthScreen.LOGIN  // ← siempre vuelve al login, no al registro
+        sessionKey++                   // ← destruye y recrea el AuthViewModel limpio
+        Unit
+    }
+
     if (!isLoggedIn) {
-        // ── FLUJO DE AUTENTICACIÓN ────────────────────────────────────────────
-        when (authScreen) {
-            AuthScreen.LOGIN -> LoginScreen(
-                onLoginSuccess      = { isLoggedIn = true },
-                onNavigateToRegister = { authScreen = AuthScreen.REGISTER }
-            )
-            AuthScreen.REGISTER -> RegisterScreen(
-                onRegisterSuccess   = { isLoggedIn = true },
-                onNavigateToLogin   = { authScreen = AuthScreen.LOGIN }
-            )
+        // key(sessionKey) hace que Compose destruya y recree el AuthViewModel
+        // con cada logout, evitando que isSuccess=true del login anterior
+        // navegue solo sin que el usuario haga nada.
+        key(sessionKey) {
+            when (authScreen) {
+                AuthScreen.LOGIN -> LoginScreen(
+                    onLoginSuccess       = { isLoggedIn = true },
+                    onNavigateToRegister = { authScreen = AuthScreen.REGISTER }
+                )
+                AuthScreen.REGISTER -> RegisterScreen(
+                    onRegisterSuccess = { isLoggedIn = true },
+                    onNavigateToLogin = { authScreen = AuthScreen.LOGIN }
+                )
+            }
         }
     } else {
-        // ── APP PRINCIPAL ─────────────────────────────────────────────────────
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(SpaceDark, SpaceDeep, SpaceMid)))
-                .systemBarsPadding()
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-
-                // ── HEADER ───────────────────────────────────────────────────
-                AppHeader(
-                    onMenuClick = { vm.menuOpen = true },
-                    onLogout    = {
-                        FirebaseAuth.getInstance().signOut()
-                        isLoggedIn = false
-                    }
-                )
-
-                // ── TAB BAR ──────────────────────────────────────────────────
-                TabBar(
-                    current  = vm.currentScreen,
-                    onChange = { vm.currentScreen = it },
-                )
-
-                // ── CONTENIDO ────────────────────────────────────────────────
-                Box(modifier = Modifier.weight(1f)) {
-                    when (vm.currentScreen) {
-                        Screen.DASHBOARD -> DashboardScreen(vm.heroGold, vm.heroLevel)
-                        Screen.SHOP      -> ShopScreen(vm.heroGold)
-                        Screen.RANKING   -> RankingScreen(vm.heroLevel)
-                        Screen.ORACLE    -> OracleScreen(vm)
-                        Screen.COMBAT    -> CombatScreen(vm)
-                    }
-                }
-
-                // ── FOOTER ───────────────────────────────────────────────────
-                AppFooter()
-            }
-
-            // ── OVERLAY: menú lateral ────────────────────────────────────────
-            NavigationMenu(
-                isOpen        = vm.menuOpen,
-                onClose       = { vm.menuOpen = false },
-                onNavigate    = { vm.currentScreen = it; vm.menuOpen = false },
-                currentScreen = vm.currentScreen,
-                heroLevel     = vm.heroLevel,
-                heroGold      = vm.heroGold,
-            )
-
-            // ── OVERLAY: modal de victoria ───────────────────────────────────
-            VictoryModal(
-                isOpen      = vm.isVictory,
-                onContinue  = { vm.continueAfterVictory() },
-                goldEarned  = vm.goldReward(),
-                xpEarned    = vm.xpReward(),
-            )
+        key(sessionKey) {
+            GameScreen(doLogout = doLogout)
         }
     }
 }
 
-// ─── HEADER (ahora con logout) ────────────────────────────────────────────────
 @Composable
-fun AppHeader(onMenuClick: () -> Unit, onLogout: () -> Unit = {}) {
+private fun GameScreen(
+    doLogout: () -> Unit,
+    vm: GameViewModel = viewModel(),
+) {
+    // ── APP PRINCIPAL ─────────────────────────────────────────────────────
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(SpaceDark, SpaceDeep, SpaceMid)))
+            .systemBarsPadding()
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            // ── HEADER ───────────────────────────────────────────────────
+            AppHeader(
+                heroName  = vm.heroName,
+                heroLevel = vm.heroLevel,
+                heroGold  = vm.heroGold,
+                onMenuClick = { vm.menuOpen = true },
+                onLogout    = doLogout
+            )
+
+            // ── TAB BAR ──────────────────────────────────────────────────
+            TabBar(
+                current  = vm.currentScreen,
+                onChange = { vm.currentScreen = it },
+            )
+
+            // ── CONTENIDO ────────────────────────────────────────────────
+            Box(modifier = Modifier.weight(1f)) {
+                when (vm.currentScreen) {
+                    Screen.DASHBOARD -> DashboardScreen(vm.heroGold, vm.heroLevel)
+                    Screen.SHOP      -> ShopScreen(vm.heroGold)
+                    Screen.RANKING   -> RankingScreen(vm.heroLevel)
+                    Screen.ORACLE    -> OracleScreen(vm)
+                    Screen.COMBAT    -> CombatScreen(vm)
+                }
+            }
+
+            // ── FOOTER ───────────────────────────────────────────────────
+            AppFooter()
+        }
+
+        // ── OVERLAY: menú lateral ────────────────────────────────────────
+        NavigationMenu(
+            isOpen        = vm.menuOpen,
+            onClose       = { vm.menuOpen = false },
+            onNavigate    = { vm.currentScreen = it; vm.menuOpen = false },
+            onLogout      = doLogout,
+            currentScreen = vm.currentScreen,
+            heroName      = vm.heroName,
+            heroLevel     = vm.heroLevel,
+            heroGold      = vm.heroGold,
+        )
+
+        // ── OVERLAY: modal de victoria ───────────────────────────────────
+        VictoryModal(
+            isOpen      = vm.isVictory,
+            onContinue  = { vm.continueAfterVictory() },
+            goldEarned  = vm.goldReward(),
+            xpEarned    = vm.xpReward(),
+        )
+    }
+}
+
+// ─── HEADER ──────────────────────────────────────────────────────────────────
+@Composable
+fun AppHeader(
+    heroName:    String,
+    heroLevel:   Int,
+    heroGold:    Int,
+    onMenuClick: () -> Unit,
+    onLogout:    () -> Unit = {},
+) {
     val rotateAnim = rememberInfiniteTransition(label = "star")
     val rotation by rotateAnim.animateFloat(
         initialValue = 0f, targetValue = 360f,
@@ -152,58 +180,64 @@ fun AppHeader(onMenuClick: () -> Unit, onLogout: () -> Unit = {}) {
         modifier = Modifier
             .fillMaxWidth()
             .background(Brush.horizontalGradient(listOf(SpaceDeep, SpaceMid, SpaceBlue)))
-            .border(
-                width = 2.dp,
-                color = PurpleNeon.copy(.3f),
-                shape = RoundedCornerShape(0.dp),
-            )
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .border(width = 2.dp, color = PurpleNeon.copy(.3f), shape = RoundedCornerShape(0.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Logo
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(34.dp)
                     .rotate(rotation)
                     .clip(CircleShape)
                     .background(GoldNeon)
                     .border(2.dp, GoldDark.copy(.5f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("⭐", fontSize = 20.sp)
+                Text("⭐", fontSize = 16.sp)
             }
-            Row {
-                Text("Winni",  color = GoldNeon,  fontWeight = FontWeight.Black, fontSize = 24.sp)
-                Text("Knight", color = TextWhite, fontWeight = FontWeight.Black, fontSize = 24.sp)
+            Column {
+                Text(
+                    heroName,
+                    color = CyanNeon,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                )
+                Text(
+                    "Nv.$heroLevel  ·  💰$heroGold",
+                    color = GoldNeon,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
 
+        // Botones
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Botón cerrar sesión
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(Color.White.copy(.05f))
-                    .border(2.dp, Color(0xFFFF6B6B).copy(.4f), RoundedCornerShape(12.dp))
+                    .border(2.dp, Color(0xFFFF6B6B).copy(.4f), RoundedCornerShape(10.dp))
                     .clickable(onClick = onLogout),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("🚪", fontSize = 16.sp)
+                Text("🚪", fontSize = 15.sp)
             }
-
-            // Botón menú
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(Color.White.copy(.05f))
-                    .border(2.dp, PurpleNeon.copy(.4f), RoundedCornerShape(12.dp))
+                    .border(2.dp, PurpleNeon.copy(.4f), RoundedCornerShape(10.dp))
                     .clickable(onClick = onMenuClick),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("☰", color = CyanNeon, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("☰", color = CyanNeon, fontSize = 17.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

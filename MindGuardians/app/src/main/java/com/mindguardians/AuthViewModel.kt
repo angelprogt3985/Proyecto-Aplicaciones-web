@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
+import com.mindguardians.data.FirebaseRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,16 +24,22 @@ data class AuthUiState(
 
 class AuthViewModel : ViewModel() {
 
-    private val auth = FirebaseAuth.getInstance()
+    private val auth       = FirebaseAuth.getInstance()
+    private val repository = FirebaseRepository()
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     // ── Setters de campos ─────────────────────────────────────────────────────
-    fun onEmailChange(value: String)          = _uiState.update { it.copy(email = value.trim(), errorMessage = null) }
-    fun onPasswordChange(value: String)       = _uiState.update { it.copy(password = value, errorMessage = null) }
-    fun onConfirmPasswordChange(value: String)= _uiState.update { it.copy(confirmPassword = value, errorMessage = null) }
-    fun onDisplayNameChange(value: String)    = _uiState.update { it.copy(displayName = value, errorMessage = null) }
+    fun onEmailChange(value: String)           = _uiState.update { it.copy(email = value.trim(), errorMessage = null) }
+    fun onPasswordChange(value: String)        = _uiState.update { it.copy(password = value, errorMessage = null) }
+    fun onConfirmPasswordChange(value: String) = _uiState.update { it.copy(confirmPassword = value, errorMessage = null) }
+    fun onDisplayNameChange(value: String)     = _uiState.update { it.copy(displayName = value, errorMessage = null) }
+
+    // ── Limpia el estado (llamar al navegar entre Login <-> Register) ──────────
+    fun resetState() {
+        _uiState.value = AuthUiState()
+    }
 
     // ── Login ─────────────────────────────────────────────────────────────────
     fun login() {
@@ -45,12 +52,7 @@ class AuthViewModel : ViewModel() {
                 auth.signInWithEmailAndPassword(state.email, state.password).await()
                 _uiState.update { it.copy(isLoading = false, isSuccess = true) }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = mapFirebaseError(e.message)
-                    )
-                }
+                _uiState.update { it.copy(isLoading = false, errorMessage = mapFirebaseError(e.message)) }
             }
         }
     }
@@ -63,21 +65,32 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
+                val name = state.displayName.trim().ifBlank { "Guerrero" }
+
+                // 1. Verificar que el nombre de héroe no esté en uso
+                val nameTaken = repository.isDisplayNameTaken(name)
+                if (nameTaken) {
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = "Ese nombre de héroe ya está en uso. Elige otro.")
+                    }
+                    return@launch
+                }
+
+                // 2. Crear usuario en Firebase Auth
                 val result = auth.createUserWithEmailAndPassword(state.email, state.password).await()
-                // Guardar el nombre en el perfil de Firebase
+
+                // 3. Guardar displayName en el perfil de Auth
                 val profileUpdates = UserProfileChangeRequest.Builder()
-                    .setDisplayName(state.displayName.ifBlank { "Guerrero" })
+                    .setDisplayName(name)
                     .build()
                 result.user?.updateProfile(profileUpdates)?.await()
 
+                // 4. Crear documento en Firestore con stats iniciales + email
+                repository.createUserProfile(name)
+
                 _uiState.update { it.copy(isLoading = false, isSuccess = true) }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = mapFirebaseError(e.message)
-                    )
-                }
+                _uiState.update { it.copy(isLoading = false, errorMessage = mapFirebaseError(e.message)) }
             }
         }
     }
@@ -124,15 +137,15 @@ class AuthViewModel : ViewModel() {
     // ── Mensajes de error amigables ───────────────────────────────────────────
     private fun mapFirebaseError(message: String?): String {
         return when {
-            message == null                              -> "Ocurrió un error inesperado"
-            "no user record"    in message              -> "No existe una cuenta con ese correo"
+            message == null                               -> "Ocurrió un error inesperado"
+            "no user record"     in message              -> "No existe una cuenta con ese correo"
             "password is invalid" in message ||
-                    "INVALID_LOGIN_CREDENTIALS" in message      -> "Correo o contraseña incorrectos"
-            "email address is already in use" in message-> "Ya existe una cuenta con ese correo"
-            "badly formatted"   in message              -> "Formato de correo inválido"
-            "network error"     in message              -> "Error de red. Verifica tu conexión"
-            "too-many-requests" in message              -> "Demasiados intentos. Intenta más tarde"
-            else                                        -> "Error: $message"
+                    "INVALID_LOGIN_CREDENTIALS" in message       -> "Correo o contraseña incorrectos"
+            "email address is already in use" in message -> "Ya existe una cuenta con ese correo"
+            "badly formatted"    in message              -> "Formato de correo inválido"
+            "network error"      in message              -> "Error de red. Verifica tu conexión"
+            "too-many-requests"  in message              -> "Demasiados intentos. Intenta más tarde"
+            else                                         -> "Error: $message"
         }
     }
 }
