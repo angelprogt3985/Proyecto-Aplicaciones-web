@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { NavSection } from "@/lib/types";
-import type { User } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import type { NavSection, User } from "@/lib/types";
 
 // Layout
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -32,32 +32,37 @@ import {
 } from "@/lib/data/mock";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState<NavSection>("dashboard");
-  const [user, setUser] = useState<User>(MOCK_USER);
+  const [user, setUser]                   = useState<User>(MOCK_USER);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        const data = await loadUserData();
-        if (data) {
-          setUser({
-            ...MOCK_USER,
-            id:          firebaseUser.uid,
-            username:    data.displayName ?? firebaseUser.email ?? "Guerrero",
-            displayName: data.displayName ?? "Guerrero",
-            level:       data.heroLevel   ?? 1,
-            xp:          data.heroXp      ?? 0,
-            gold:        data.heroGold    ?? 0,
-            energy:      data.heroHp      ?? 100,
-          });
-        }
+      if (!firebaseUser) {
+        router.push("/login");
+        return;
       }
+
+      const data = await loadUserData();
+      if (data) {
+        setUser({
+          ...MOCK_USER,
+          id:          firebaseUser.uid,
+          username:    data.displayName ?? firebaseUser.email ?? "Guerrero",
+          displayName: data.displayName ?? "Guerrero",
+          level:       data.heroLevel   ?? 1,
+          xp:          data.heroXp      ?? 0,
+          gold:        data.heroGold    ?? 0,
+          energy:      data.heroHp      ?? 100,
+        });
+      }
+
       setIsLoadingUser(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   if (isLoadingUser) {
     return (
