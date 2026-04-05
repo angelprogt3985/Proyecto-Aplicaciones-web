@@ -1,83 +1,147 @@
 "use client";
-import { Sparkles, Send } from 'lucide-react';
-import { useState } from 'react';
 
-interface Message { role: 'oracle' | 'user'; text: string; }
+import { useState, useRef, useEffect } from "react";
+import { Sparkles, Send } from "lucide-react";
+import type { ChatMessage } from "@/lib/types";
 
-const oracleResponses = [
-  '¡Excelente pregunta! Basándome en tus estadísticas, te recomiendo incrementar tu actividad cardiovascular en un 15% esta semana.',
-  'Veo que has progresado mucho. Para optimizar tu recuperación, considera agregar 30 minutos de estiramientos después de tu entrenamiento.',
-  'Tu dedicación es admirable. Recuerda que el descanso es tan importante como el ejercicio. Asegúrate de dormir 7-8 horas.',
-  'Consejo del oráculo: Mantén una hidratación constante. Tu cuerpo necesita al menos 2 litros de agua al día para rendir al máximo.',
-];
+interface GeminiOracleProps {
+  initialMessages: ChatMessage[];
+}
 
-export function GeminiOracle() {
-  const [message, setMessage] = useState('');
-  const [conversation, setConversation] = useState<Message[]>([
-    { role: 'oracle', text: '¡Saludos, valiente aventurero! Soy el Oráculo Gemini, tu guía en el camino hacia la salud y el bienestar. ¿En qué puedo asistirte hoy?' },
-  ]);
+export function GeminiOracle({ initialMessages }: GeminiOracleProps) {
+  const [messages, setMessages]   = useState<ChatMessage[]>(initialMessages);
+  const [input, setInput]         = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = () => {
-    if (!message.trim()) return;
-    const oracleMsg = { role: 'oracle' as const, text: oracleResponses[Math.floor(Math.random() * oracleResponses.length)] };
-    setConversation(prev => [...prev, { role: 'user', text: message }, oracleMsg]);
-    setMessage('');
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSend = async () => {
+    const trimmed = input.trim();
+    if (!trimmed || isLoading) return;
+
+    const userMsg: ChatMessage = {
+      id:        `msg_${Date.now()}_user`,
+      role:      "user",
+      text:      trimmed,
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/oracle", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ message: trimmed }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al contactar al Oráculo");
+      }
+
+      const data = await response.json();
+
+      const oracleMsg: ChatMessage = {
+        id:        `msg_${Date.now()}_oracle`,
+        role:      "oracle",
+        text:      data.reply,
+        timestamp: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, oracleMsg]);
+    } catch {
+      setError("El cosmos guarda silencio. Intenta de nuevo.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="bg-[#242b3d] rounded-xl border border-[rgba(224,179,94,0.3)] p-6 h-full flex flex-col shadow-lg relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-40 h-40 bg-[#e0b35e] rounded-full blur-[80px] opacity-25 pointer-events-none" />
-      
-      <div className="relative flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-gradient-to-br from-[#e0b35e] to-[#d4a855] rounded-full flex items-center justify-center shadow-lg shadow-[#e0b35e]/30">
-          <Sparkles className="w-7 h-7 text-[#1a1f2e]" />
+    <div className="relative flex h-full flex-col overflow-hidden rounded-xl border border-mq-gold/30 bg-mq-card p-6 shadow-lg">
+      <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-mq-gold opacity-15 blur-[70px]" />
+
+      <div className="relative mb-5 flex items-center gap-3">
+        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-mq-gold to-mq-gold2 shadow-lg shadow-mq-gold/30">
+          <Sparkles className="h-6 w-6 text-mq-bg" />
         </div>
         <div>
-          <h2 className="text-xl font-medium text-[#f0f6fc]">Oráculo Gemini</h2>
-          <p className="text-sm text-[#e0b35e]">Consejero de Salud con IA</p>
+          <p className="text-lg font-semibold text-mq-text">Oráculo Gemini</p>
+          <p className="text-xs text-mq-gold">Consejero de Salud con IA</p>
         </div>
       </div>
 
-      <div className="flex-1 bg-[#1a1f2e] rounded-lg p-4 mb-4 overflow-y-auto max-h-[300px] space-y-4 border border-[rgba(88,166,255,0.15)]">
-        {conversation.map((msg, index) => (
-          <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] px-4 py-3 rounded-lg ${
-              msg.role === 'user'
-                ? 'bg-[#58a6ff] text-[#1a1f2e]'
-                : 'bg-[#242b3d] text-[#f0f6fc] border border-[rgba(224,179,94,0.3)]'
-            }`}>
-              {msg.role === 'oracle' && (
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="w-4 h-4 text-[#e0b35e]" />
-                  <span className="text-xs text-[#e0b35e]">Oráculo</span>
+      <div
+        ref={scrollRef}
+        className="relative mb-4 flex flex-1 flex-col gap-3 overflow-y-auto rounded-xl border border-mq-blue/15 bg-mq-bg p-4"
+        style={{ maxHeight: 280 }}
+      >
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`max-w-[82%] rounded-xl px-4 py-2.5 text-sm leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-mq-blue text-mq-bg"
+                  : "border border-mq-gold/25 bg-mq-card text-mq-text"
+              }`}
+            >
+              {msg.role === "oracle" && (
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3 text-mq-gold" />
+                  <span className="text-[11px] text-mq-gold">Oráculo</span>
                 </div>
               )}
-              <p className="text-sm">{msg.text}</p>
+              {msg.text}
             </div>
           </div>
         ))}
+
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="rounded-xl border border-mq-gold/25 bg-mq-card px-4 py-2.5 text-sm text-mq-muted">
+              El Oráculo consulta el cosmos...
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="text-center text-xs text-red-400">{error}</div>
+        )}
       </div>
 
-      <div className="relative flex gap-2">
+      <div className="flex gap-2">
         <input
           type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Escribe tu pregunta al oráculo..."
-          className="flex-1 bg-[#1a1f2e] border border-[rgba(224,179,94,0.3)] rounded-lg px-4 py-3 text-[#f0f6fc] placeholder-[#a0aec0] focus:outline-none focus:ring-2 focus:ring-[#e0b35e] text-sm"
+          disabled={isLoading}
+          className="flex-1 rounded-xl border border-mq-gold/30 bg-mq-bg px-4 py-3 text-sm text-mq-text placeholder-mq-muted outline-none transition-colors focus:border-mq-gold disabled:opacity-50"
         />
         <button
           onClick={handleSend}
-          className="px-4 py-3 bg-gradient-to-r from-[#e0b35e] to-[#d4a855] hover:from-[#d4a855] hover:to-[#e0b35e] text-[#1a1f2e] rounded-lg transition-all shadow-lg shadow-[#e0b35e]/30"
+          disabled={isLoading}
+          className="flex items-center justify-center rounded-xl bg-gradient-to-br from-mq-gold to-mq-gold2 px-4 shadow-lg shadow-mq-gold/25 transition-opacity hover:opacity-85 disabled:opacity-50"
         >
-          <Send className="w-5 h-5" />
+          <Send className="h-4 w-4 text-mq-bg" />
         </button>
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#a0aec0]">
-        <div className="w-2 h-2 rounded-full bg-[#58a6ff]" />
-        <span>IA Activa • Respuestas simuladas</span>
+      <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-mq-muted">
+        <span className="h-1.5 w-1.5 rounded-full bg-mq-gold" />
+        IA Activa · Gemini
       </div>
     </div>
   );
