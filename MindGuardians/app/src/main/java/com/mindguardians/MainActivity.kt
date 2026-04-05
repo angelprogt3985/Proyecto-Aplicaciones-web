@@ -80,7 +80,7 @@ fun MindGuardiansApp(vm: GameViewModel = viewModel()) {
                     Screen.DASHBOARD -> DashboardScreen(vm.heroGold, vm.heroLevel)
                     Screen.SHOP      -> ShopScreen(vm.heroGold)
                     Screen.RANKING   -> RankingScreen(vm.heroLevel)
-                    Screen.ORACLE    -> OracleScreen()
+                    Screen.ORACLE    -> OracleScreen(vm)
                     Screen.COMBAT    -> CombatScreen(vm)
                 }
             }

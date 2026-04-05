@@ -56,5 +56,6 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.gson)
+    implementation(libs.okhttp)
 
 }

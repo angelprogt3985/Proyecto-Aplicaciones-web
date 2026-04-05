@@ -8,10 +8,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindguardians.data.FirebaseRepository
+import com.mindguardians.data.GeminiRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-// ── Modelos ──────────────────────────────────────────────────────────────────
 
 data class Monster(
     val name: String,
@@ -35,24 +34,27 @@ val MONSTERS = listOf(
     Monster("Nebulosa del Estrés",    "Caos Cósmico",    150),
 )
 
-// ── ViewModel ────────────────────────────────────────────────────────────────
-
 class GameViewModel : ViewModel() {
 
-    private val repository = FirebaseRepository()
+    private val repository       = FirebaseRepository()
+    private val geminiRepository = GeminiRepository()
 
-    var heroHp          by mutableIntStateOf(100)
-    var heroLevel       by mutableIntStateOf(1)
-    var heroXp          by mutableIntStateOf(0)
-    var heroGold        by mutableIntStateOf(0)
+    var heroHp        by mutableIntStateOf(100)
+    var heroLevel     by mutableIntStateOf(1)
+    var heroXp        by mutableIntStateOf(0)
+    var heroGold      by mutableIntStateOf(0)
 
-    var monsterIndex    by mutableIntStateOf(0)
-    var monsterHp       by mutableIntStateOf(MONSTERS[0].maxHp)
-    var isAttacking     by mutableStateOf(false)
-    var isVictory       by mutableStateOf(false)
-    var menuOpen        by mutableStateOf(false)
-    var currentScreen   by mutableStateOf(Screen.COMBAT)
-    var isLoadingUser   by mutableStateOf(true)
+    var monsterIndex  by mutableIntStateOf(0)
+    var monsterHp     by mutableIntStateOf(MONSTERS[0].maxHp)
+    var isAttacking   by mutableStateOf(false)
+    var isVictory     by mutableStateOf(false)
+    var menuOpen      by mutableStateOf(false)
+    var currentScreen by mutableStateOf(Screen.COMBAT)
+    var isLoadingUser by mutableStateOf(true)
+
+    var oracleMessages  = mutableStateListOf<Pair<String, String>>()
+    var isOracleLoading by mutableStateOf(false)
+    var oracleError     by mutableStateOf<String?>(null)
 
     val battleLog = mutableStateListOf<BattleMessage>()
 
@@ -60,6 +62,9 @@ class GameViewModel : ViewModel() {
 
     init {
         loadUser()
+        oracleMessages.add(
+            Pair("oracle", "¡Salve, Guerrero Estelar! El cosmos observa tu jornada. ¿Qué hazañas de salud has realizado hoy?")
+        )
     }
 
     private fun loadUser() {
@@ -72,6 +77,26 @@ class GameViewModel : ViewModel() {
                 heroHp    = (data["heroHp"]    as? Long)?.toInt() ?: 100
             }
             isLoadingUser = false
+        }
+    }
+
+    fun consultOracle(userMessage: String) {
+        if (userMessage.isBlank()) return
+        oracleMessages.add(Pair("user", userMessage))
+        isOracleLoading = true
+        oracleError     = null
+        viewModelScope.launch {
+            val reply = try {
+                geminiRepository.consultOracle(userMessage)
+            } catch (e: Exception) {
+                oracleError = "Error al contactar al Oráculo. Intenta de nuevo."
+                /* oracleError = e.message ?: e.toString() */
+                null
+            }
+            if (reply != null) {
+                oracleMessages.add(Pair("oracle", reply))
+            }
+            isOracleLoading = false
         }
     }
 

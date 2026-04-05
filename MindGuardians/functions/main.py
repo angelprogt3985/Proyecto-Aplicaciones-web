@@ -4,20 +4,18 @@ import requests
 from firebase_functions import https_fn
 from firebase_functions.options import set_global_options
 from firebase_admin import initialize_app
-from firebase_functions import params
+
 set_global_options(max_instances=10)
 initialize_app()
 
-
-
-GEMINI_API_KEY = params.SecretParam("GEMINI_API_KEY")
-
-
-@https_fn.on_request()
+@https_fn.on_request(secrets=["GEMINI_API_KEY"])
 def consult_oracle(req: https_fn.Request) -> https_fn.Response:
-    api_key = GEMINI_API_KEY.value
+    api_key = os.environ.get("GEMINI_API_KEY")
+    
+    print(f"API key found: {api_key is not None}")
+    print(f"API key length: {len(api_key) if api_key else 0}")
 
-    GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    GEMINI_URL = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key={api_key}"
 
     if req.method == "OPTIONS":
         headers = {
@@ -58,8 +56,15 @@ Hazaña del jugador: {user_message}
         data=json.dumps(payload),
     )
 
+    print(f"Gemini status: {gemini_response.status_code}")
+    print(f"Gemini response: {gemini_response.text[:500]}")
+
     if gemini_response.status_code != 200:
-        return https_fn.Response("Error al contactar Gemini", status=502, headers=headers)
+        return https_fn.Response(
+            f"Error al contactar Gemini: {gemini_response.status_code} - {gemini_response.text[:200]}",
+            status=502,
+            headers=headers
+        )
 
     result = gemini_response.json()
     reply  = result["candidates"][0]["content"]["parts"][0]["text"]

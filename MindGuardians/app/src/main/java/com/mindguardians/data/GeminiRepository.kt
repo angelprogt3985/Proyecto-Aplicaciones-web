@@ -1,11 +1,13 @@
 package com.mindguardians.data
 
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.POST
+import java.util.concurrent.TimeUnit
 
-private const val CLOUD_FUNCTION_URL = "https://us-central1-mindguardians-b07d3.cloudfunctions.net/consult_oracle"
+private const val CLOUD_FUNCTION_URL = "https://consult-oracle-ajesprbufa-uc.a.run.app/"
 
 private data class OracleRequest(
     val message: String
@@ -16,14 +18,21 @@ private data class OracleResponse(
 )
 
 private interface OracleApi {
-    @POST("consult_oracle")
+    @POST(".")
     suspend fun consult(@Body request: OracleRequest): OracleResponse
 }
 
 class GeminiRepository {
 
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
     private val api: OracleApi = Retrofit.Builder()
         .baseUrl(CLOUD_FUNCTION_URL)
+        .client(client)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
         .create(OracleApi::class.java)
