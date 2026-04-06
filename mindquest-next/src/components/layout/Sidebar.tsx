@@ -10,8 +10,10 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { NavSection } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { logout } from "@/lib/auth";
 
 interface NavItem {
   id: NavSection;
@@ -39,6 +41,13 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeSection, onNavigate, userGold }: SidebarProps) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
+
   return (
     <aside className="relative z-10 flex h-screen w-64 flex-shrink-0 flex-col overflow-hidden border-r border-mq-blue/20 bg-mq-bg">
       {/* Decorative glows */}
@@ -95,7 +104,10 @@ export function Sidebar({ activeSection, onNavigate, userGold }: SidebarProps) {
             <span>{label}</span>
           </button>
         ))}
-        <button className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm text-mq-muted transition-all hover:bg-mq-card hover:text-mq-text">
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm text-mq-muted transition-all hover:bg-mq-card hover:text-red-400"
+        >
           <LogOut className="h-5 w-5 flex-shrink-0" />
           <span>Salir</span>
         </button>
