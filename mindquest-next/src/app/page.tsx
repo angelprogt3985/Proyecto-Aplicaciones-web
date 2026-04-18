@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { NavSection, User, BattleRecord, RankedHero } from "@/lib/types";
-
+import type { NavSection, User, BattleRecord, RankedHero, ShopItem } from "@/lib/types";
 // Layout
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar }   from "@/components/layout/TopBar";
@@ -93,10 +92,18 @@ export default function DashboardPage() {
     return () => unsubscribe();
   }, [router]);
 
-  async function handlePurchase(itemId: string, price: number) {
-    if (user.gold < price) return;
-    await spendGold(price);
-    setUser((prev) => ({ ...prev, gold: prev.gold - price }));
+  async function handlePurchase(item: ShopItem) {
+    if (user.gold < item.price) return;
+    await spendGold(item.price, {
+      id:          item.id,
+      name:        item.name,
+      description: item.description,
+      category:    item.category,
+      rarity:      item.rarity,
+      stats:       item.stats as Record<string, number>,
+      iconName:    item.iconName,
+    });
+    setUser((prev) => ({ ...prev, gold: prev.gold - item.price }));
   }
 
   if (isLoadingUser) {
@@ -147,11 +154,11 @@ export default function DashboardPage() {
 
             <BattlesHistory battles={battles} />
 
-            <GoldShop
-              items={MOCK_SHOP_ITEMS}
-              userGold={user.gold}
-              onPurchase={handlePurchase}
-            />
+          <GoldShop
+          items={MOCK_SHOP_ITEMS}
+          userGold={user.gold}
+          onPurchase={handlePurchase}
+          />
 
           </div>
         </main>

@@ -29,18 +29,25 @@ const categories = [
 interface GoldShopProps {
   items:      ShopItem[];
   userGold:   number;
-  onPurchase: (itemId: string, price: number) => Promise<void>;
+  onPurchase: (item: ShopItem) => Promise<void>;
 }
 
 export function GoldShop({ items, userGold, onPurchase }: GoldShopProps) {
-  const [category, setCategory] = useState<ShopCategoryFilter>("all");
+  const [category, setCategory]       = useState<ShopCategoryFilter>("all");
+  const [purchasingId, setPurchasingId] = useState<string | null>(null);
 
   const filtered = items.filter(
     (i) => category === "all" || i.category === category
   );
 
   const handlePurchase = async (item: ShopItem) => {
-    await onPurchase(item.id, item.price);
+    if (purchasingId) return;
+    setPurchasingId(item.id);
+    try {
+      await onPurchase(item);
+    } finally {
+      setPurchasingId(null);
+    }
   };
 
   return (
@@ -88,10 +95,13 @@ export function GoldShop({ items, userGold, onPurchase }: GoldShopProps) {
             const Icon = ICON_MAP[item.iconName] ?? Sword;
             const colors = rarityColors[item.rarity];
             const canAfford = userGold >= item.price;
+            const isThisOne = purchasingId === item.id;
+            const blocked   = !!purchasingId;
+
             return (
               <div
                 key={item.id}
-                className={`${colors.bg} border ${colors.border} rounded-xl p-4 hover:scale-105 transition-all cursor-pointer shadow-lg flex flex-col ${!canAfford ? 'opacity-50' : ''}`}
+                className={`${colors.bg} border ${colors.border} rounded-xl p-4 transition-all shadow-lg flex flex-col ${!canAfford || blocked ? 'opacity-50' : 'hover:scale-105 cursor-pointer'}`}
               >
                 <div className={`w-16 h-16 mx-auto ${colors.bg} rounded-full flex items-center justify-center mb-3 border ${colors.border} shadow-inner`}>
                   <Icon className={`w-8 h-8 ${colors.text}`} />
@@ -131,15 +141,15 @@ export function GoldShop({ items, userGold, onPurchase }: GoldShopProps) {
                     <span className="text-sm">{item.price.toLocaleString()}</span>
                   </div>
                   <button
-                    disabled={!canAfford}
-                    onClick={() => canAfford && handlePurchase(item)}
+                    disabled={!canAfford || blocked}
+                    onClick={() => canAfford && !blocked && handlePurchase(item)}
                     className={`w-full py-2 rounded-lg text-sm transition-all font-medium ${
-                      canAfford
+                      canAfford && !blocked
                         ? 'bg-[#58a6ff] hover:bg-[#6eb5ff] text-[#1a1f2e] shadow-sm'
                         : 'bg-[#2d3548] text-[#a0aec0] cursor-not-allowed'
                     }`}
                   >
-                    {canAfford ? 'Comprar' : 'Sin Oro'}
+                    {isThisOne ? 'Comprando...' : canAfford ? 'Comprar' : 'Sin Oro'}
                   </button>
                 </div>
               </div>
