@@ -87,6 +87,7 @@ export interface EquipmentSet {
 export type ShopItemCategory = EquipmentType | "boost";
 
 export interface ShopItem {
+  icon: any;
   id: string;
   name: string;
   description: string;

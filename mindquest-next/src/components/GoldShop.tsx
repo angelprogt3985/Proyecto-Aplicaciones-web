@@ -1,4 +1,5 @@
 "use client";
+import { ShopCategoryFilter, ShopItem } from '@/lib/types';
 import { ShoppingCart, Star, Sword, Shield, Heart, Zap, TrendingUp, Award } from 'lucide-react';
 import { useState } from 'react';
 
@@ -33,11 +34,23 @@ const categories = [
   { id: 'boost' as Category, label: 'Potenciadores', icon: TrendingUp },
 ];
 
-export function GoldShop() {
-  const [selectedCategory, setSelectedCategory] = useState<Category>('all');
-  const userGold = 1250;
+interface GoldShopProps {
+  items: ShopItem[];
+  userGold: number;
+  onPurchase: (itemId: string, price: number) => Promise<void>;
+}
 
-  const filteredItems = shopItems.filter(item => selectedCategory === 'all' || item.category === selectedCategory);
+
+export function GoldShop({ items, userGold, onPurchase }: GoldShopProps) {
+  const [category, setCategory] = useState<ShopCategoryFilter>("all");
+
+  const filtered = items.filter(
+    (i) => category === "all" || i.category === category
+  );
+
+  const handlePurchase = async (item: ShopItem) => {
+    await onPurchase(item.id, item.price);
+  };
 
   return (
     <div className="bg-[#242b3d] rounded-xl border border-[rgba(224,179,94,0.3)] p-6 shadow-lg relative overflow-hidden">
@@ -65,9 +78,9 @@ export function GoldShop() {
             return (
               <button
                 key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
+                onClick={() => setCategory(cat.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all ${
-                  selectedCategory === cat.id
+                  category === cat.id
                     ? 'bg-[#e0b35e] text-[#1a1f2e] shadow-lg shadow-[#e0b35e]/30 font-medium'
                     : 'bg-[#1a1f2e] text-[#a0aec0] border border-[rgba(88,166,255,0.25)] hover:border-[rgba(224,179,94,0.4)]'
                 }`}
@@ -80,7 +93,7 @@ export function GoldShop() {
         </div>
 
         <div className="grid grid-cols-4 gap-4">
-          {filteredItems.map((item) => {
+          {filtered.map((item) => {
             const Icon = item.icon;
             const colors = rarityColors[item.rarity];
             const canAfford = userGold >= item.price;
