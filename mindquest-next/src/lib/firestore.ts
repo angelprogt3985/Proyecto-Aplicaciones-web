@@ -62,3 +62,32 @@ export async function loadRanking(): Promise<Record<string, any>[]> {
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
+
+// Leer batallas del usuario actual, ordenadas de más reciente a más antigua
+export async function loadBattles(): Promise<Record<string, any>[]> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return [];
+
+  const q = query(
+    collection(db, "users", uid, "battles"),
+    orderBy("date", "desc"),
+    limit(50)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// Descontar oro del usuario al comprar en la tienda
+export async function spendGold(amount: number): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return;
+
+  const userRef = doc(db, "users", uid);
+  const snap    = await getDoc(userRef);
+  if (!snap.exists()) return;
+
+  const currentGold: number = snap.data().heroGold ?? 0;
+  if (currentGold < amount) return;
+
+  await updateDoc(userRef, { heroGold: currentGold - amount });
+}
