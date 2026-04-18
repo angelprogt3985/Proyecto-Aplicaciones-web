@@ -1,192 +1,157 @@
 "use client";
+import { ShopCategoryFilter, ShopItem } from '@/lib/types';
+import { ShoppingCart, Star, Sword, Shield, Heart, Zap, TrendingUp, Award } from 'lucide-react';
+import { useState } from 'react';
 
-import { useState } from "react";
-import {
-  ShoppingCart,
-  Sword,
-  Shield,
-  Heart,
-  Zap,
-  Star,
-  TrendingUp,
-  Award,
-} from "lucide-react";
-import type { ShopItem, ShopCategoryFilter } from "@/lib/types";
-import { RARITY_STYLES } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+const rarityColors: Record<Rarity, { text: string; border: string; bg: string }> = {
+  common:    { text: 'text-[#a0aec0]', border: 'border-[#4a5568]',                bg: 'bg-[#2d3548]' },
+  rare:      { text: 'text-[#58a6ff]', border: 'border-[rgba(88,166,255,0.4)]',   bg: 'bg-[#1e3a5f]' },
+  epic:      { text: 'text-[#b8a3e0]', border: 'border-[rgba(184,163,224,0.4)]',  bg: 'bg-[#3d2d5f]' },
+  legendary: { text: 'text-[#e0b35e]', border: 'border-[rgba(224,179,94,0.4)]',   bg: 'bg-[#3d3020]' },
+};
+
+const starCount: Record<Rarity, number> = { legendary: 5, epic: 4, rare: 3, common: 2 };
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Sword, Shield, Heart, Zap, Star, TrendingUp, Award,
 };
 
-const CATEGORIES: { id: ShopCategoryFilter; label: string; icon: React.ElementType }[] = [
-  { id: "all",       label: "Todo",          icon: Star       },
-  { id: "weapon",    label: "Armas",         icon: Sword      },
-  { id: "armor",     label: "Armaduras",     icon: Shield     },
-  { id: "accessory", label: "Accesorios",    icon: Heart      },
-  { id: "boost",     label: "Potenciadores", icon: TrendingUp },
+const categories = [
+  { id: 'all' as ShopCategoryFilter,       label: 'Todo',          icon: Star       },
+  { id: 'weapon' as ShopCategoryFilter,    label: 'Armas',         icon: Sword      },
+  { id: 'armor' as ShopCategoryFilter,     label: 'Armaduras',     icon: Shield     },
+  { id: 'accessory' as ShopCategoryFilter, label: 'Accesorios',    icon: Heart      },
+  { id: 'boost' as ShopCategoryFilter,     label: 'Potenciadores', icon: TrendingUp },
 ];
 
 interface GoldShopProps {
-  items: ShopItem[];
-  userGold: number;
+  items:      ShopItem[];
+  userGold:   number;
+  onPurchase: (itemId: string, price: number) => Promise<void>;
 }
 
-export function GoldShop({ items, userGold }: GoldShopProps) {
+export function GoldShop({ items, userGold, onPurchase }: GoldShopProps) {
   const [category, setCategory] = useState<ShopCategoryFilter>("all");
 
   const filtered = items.filter(
     (i) => category === "all" || i.category === category
   );
 
-  /**
-   * handlePurchase — stub for future API integration.
-   * Replace with: POST /api/shop/purchase { itemId, userId }
-   */
-  const handlePurchase = (item: ShopItem) => {
-    console.log("Purchase item:", item.id);
-    // TODO: deduct gold, add item to inventory, refresh state
+  const handlePurchase = async (item: ShopItem) => {
+    await onPurchase(item.id, item.price);
   };
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-mq-gold/30 bg-mq-card p-6 shadow-lg">
-      <div className="pointer-events-none absolute bottom-0 left-1/3 h-52 w-52 rounded-full bg-mq-gold opacity-12 blur-[110px]" />
+    <div className="bg-[#242b3d] rounded-xl border border-[rgba(224,179,94,0.3)] p-6 shadow-lg relative overflow-hidden">
+      <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-[#e0b35e] rounded-full blur-[120px] opacity-20 pointer-events-none" />
 
-      {/* Header */}
-      <div className="relative mb-5 flex items-center justify-between">
-        <div>
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-mq-text">
-            <ShoppingCart className="h-5 w-5 text-mq-gold" />
-            Tienda de Oro & Equipo
-          </h2>
-          <p className="mt-0.5 text-sm text-mq-muted">
-            Mejora las estadísticas de tu héroe
+      <div className="relative">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-medium text-[#f0f6fc] flex items-center gap-2">
+              <ShoppingCart className="w-6 h-6 text-[#e0b35e]" />
+              Tienda de Oro & Equipo
+            </h2>
+            <p className="text-sm text-[#a0aec0] mt-1">Mejora las estadísticas de tu héroe</p>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 bg-[#1a1f2e] border border-[rgba(224,179,94,0.3)] rounded-lg">
+            <span className="text-[#e0b35e]">🪙</span>
+            <span className="text-[#f0f6fc] font-medium">{userGold.toLocaleString()}</span>
+            <span className="text-xs text-[#a0aec0]">Oro Disponible</span>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mb-6">
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setCategory(cat.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all ${
+                  category === cat.id
+                    ? 'bg-[#e0b35e] text-[#1a1f2e] shadow-lg shadow-[#e0b35e]/30 font-medium'
+                    : 'bg-[#1a1f2e] text-[#a0aec0] border border-[rgba(88,166,255,0.25)] hover:border-[rgba(224,179,94,0.4)]'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-4 gap-4">
+          {filtered.map((item) => {
+            const Icon = ICON_MAP[item.iconName] ?? Sword;
+            const colors = rarityColors[item.rarity];
+            const canAfford = userGold >= item.price;
+            return (
+              <div
+                key={item.id}
+                className={`${colors.bg} border ${colors.border} rounded-xl p-4 hover:scale-105 transition-all cursor-pointer shadow-lg flex flex-col ${!canAfford ? 'opacity-50' : ''}`}
+              >
+                <div className={`w-16 h-16 mx-auto ${colors.bg} rounded-full flex items-center justify-center mb-3 border ${colors.border} shadow-inner`}>
+                  <Icon className={`w-8 h-8 ${colors.text}`} />
+                </div>
+                <h3 className="text-sm text-[#f0f6fc] text-center mb-1 font-medium">{item.name}</h3>
+                <div className="flex justify-center gap-1 mb-2">
+                  {Array.from({ length: starCount[item.rarity] }).map((_, i) => (
+                    <Star key={i} className={`w-3 h-3 ${colors.text} fill-current`} />
+                  ))}
+                </div>
+                <p className="text-xs text-[#a0aec0] text-center mb-3 flex-grow">{item.description}</p>
+                {(item.stats.power != null || item.stats.defense != null || item.stats.health != null) && (
+                  <div className="space-y-1 mb-3">
+                    {item.stats.power != null && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#a0aec0]">Poder</span>
+                        <span className="text-[#ff6b6b]">+{item.stats.power}</span>
+                      </div>
+                    )}
+                    {item.stats.defense != null && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#a0aec0]">Defensa</span>
+                        <span className="text-[#58a6ff]">+{item.stats.defense}</span>
+                      </div>
+                    )}
+                    {item.stats.health != null && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#a0aec0]">Vida</span>
+                        <span className="text-[#79c0ff]">+{item.stats.health}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="mt-auto">
+                  <div className="flex items-center justify-center gap-1 mb-2 text-[#e0b35e]">
+                    <span>🪙</span>
+                    <span className="text-sm">{item.price.toLocaleString()}</span>
+                  </div>
+                  <button
+                    disabled={!canAfford}
+                    onClick={() => canAfford && handlePurchase(item)}
+                    className={`w-full py-2 rounded-lg text-sm transition-all font-medium ${
+                      canAfford
+                        ? 'bg-[#58a6ff] hover:bg-[#6eb5ff] text-[#1a1f2e] shadow-sm'
+                        : 'bg-[#2d3548] text-[#a0aec0] cursor-not-allowed'
+                    }`}
+                  >
+                    {canAfford ? 'Comprar' : 'Sin Oro'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-6 p-4 bg-[#1a1f2e] rounded-lg border border-[rgba(88,166,255,0.2)]">
+          <p className="text-sm text-[#a0aec0] text-center">
+            💡 El oro se gana completando combates y mejorando tus hábitos diarios. Las mejoras de equipo afectan las estadísticas en la base de datos.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-mq-gold/30 bg-mq-bg px-4 py-2">
-          <span>🪙</span>
-          <span className="font-semibold text-mq-text">
-            {userGold.toLocaleString()}
-          </span>
-          <span className="text-xs text-mq-muted">Oro Disponible</span>
-        </div>
-      </div>
-
-      {/* Category tabs */}
-      <div className="relative mb-5 flex gap-2">
-        {CATEGORIES.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setCategory(id)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-medium transition-all",
-              category === id
-                ? "border-mq-gold bg-mq-gold text-mq-bg shadow-md shadow-mq-gold/25"
-                : "border-mq-blue/25 bg-mq-bg text-mq-muted hover:border-mq-gold/40 hover:text-mq-text"
-            )}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Items grid */}
-      <div className="relative grid grid-cols-4 gap-3">
-        {filtered.map((item) => {
-          const styles = RARITY_STYLES[item.rarity];
-          const Icon = ICON_MAP[item.iconName] ?? Sword;
-          const canAfford = userGold >= item.price;
-
-          return (
-            <div
-              key={item.id}
-              className={cn(
-                "flex flex-col rounded-xl border p-4 transition-transform",
-                styles.bg,
-                styles.border,
-                canAfford
-                  ? "cursor-pointer hover:scale-[1.04]"
-                  : "opacity-50"
-              )}
-            >
-              {/* Icon */}
-              <div
-                className={cn(
-                  "mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border shadow-inner",
-                  styles.bg,
-                  styles.border
-                )}
-              >
-                <Icon className={cn("h-7 w-7", styles.text)} />
-              </div>
-
-              {/* Name */}
-              <p className="mb-1 text-center text-xs font-semibold text-mq-text">
-                {item.name}
-              </p>
-
-              {/* Stars */}
-              <div className="mb-2 flex justify-center gap-0.5">
-                {Array.from({ length: styles.stars }).map((_, i) => (
-                  <Star key={i} className={cn("h-2.5 w-2.5 fill-current", styles.text)} />
-                ))}
-              </div>
-
-              {/* Description */}
-              <p className="mb-3 flex-1 text-center text-[11px] leading-relaxed text-mq-muted">
-                {item.description}
-              </p>
-
-              {/* Stats */}
-              {(item.stats.power != null || item.stats.defense != null || item.stats.health != null) && (
-                <div className="mb-3 space-y-0.5">
-                  {item.stats.power != null && (
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-mq-muted">Poder</span>
-                      <span className="text-mq-red">+{item.stats.power}</span>
-                    </div>
-                  )}
-                  {item.stats.defense != null && (
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-mq-muted">Defensa</span>
-                      <span className="text-mq-blue">+{item.stats.defense}</span>
-                    </div>
-                  )}
-                  {item.stats.health != null && (
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-mq-muted">Vida</span>
-                      <span className="text-mq-teal">+{item.stats.health}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Price + buy */}
-              <div className="mt-auto">
-                <div className="mb-2 flex items-center justify-center gap-1 text-sm text-mq-gold">
-                  🪙 {item.price.toLocaleString()}
-                </div>
-                <button
-                  disabled={!canAfford}
-                  onClick={() => canAfford && handlePurchase(item)}
-                  className={cn(
-                    "w-full rounded-xl py-2 text-xs font-semibold transition-colors",
-                    canAfford
-                      ? "bg-mq-blue text-mq-bg hover:bg-mq-blue2"
-                      : "cursor-not-allowed bg-mq-card2 text-mq-muted"
-                  )}
-                >
-                  {canAfford ? "Comprar" : "Sin Oro"}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="relative mt-5 rounded-xl border border-mq-blue/20 bg-mq-bg p-4 text-center text-xs text-mq-muted">
-        💡 El oro se gana completando combates y mejorando tus hábitos diarios. Las mejoras de equipo afectan las estadísticas en la base de datos.
       </div>
     </div>
   );

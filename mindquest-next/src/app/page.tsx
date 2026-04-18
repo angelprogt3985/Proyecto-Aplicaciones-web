@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { NavSection, User } from "@/lib/types";
+import type { NavSection, User, BattleRecord, RankedHero } from "@/lib/types";
 
 // Layout
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -17,17 +17,15 @@ import { EquipmentInventory } from "@/components/inventory/EquipmentInventory";
 import { BattlesHistory }     from "@/components/battles/BattlesHistory";
 import { GoldShop }           from "@/components/shop/GoldShop";
 
-import { loadUserData } from "@/lib/firestore";
-import { auth }         from "@/lib/firebase";
+import { loadUserData, loadBattles, loadRanking, spendGold } from "@/lib/firestore";
+import { auth } from "@/lib/firebase";
 
 import {
   MOCK_USER,
   MOCK_VITALITY,
-  MOCK_BATTLES,
   MOCK_EQUIPMENT,
   MOCK_EQUIPMENT_SET,
   MOCK_SHOP_ITEMS,
-  MOCK_RANKING,
   MOCK_ORACLE_MESSAGES,
 } from "@/lib/data/mock";
 
@@ -35,6 +33,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<NavSection>("dashboard");
   const [user, setUser]                   = useState<User>(MOCK_USER);
+  const [battles, setBattles]             = useState<BattleRecord[]>([]);
+  const [ranking, setRanking]             = useState<RankedHero[]>([]);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
   useEffect(() => {
@@ -44,7 +44,12 @@ export default function DashboardPage() {
         return;
       }
 
-      const data = await loadUserData();
+      const [data, rawBattles, rawRanking] = await Promise.all([
+        loadUserData(),
+        loadBattles(),
+        loadRanking(),
+      ]);
+
       if (data) {
         setUser({
           ...MOCK_USER,
@@ -58,11 +63,41 @@ export default function DashboardPage() {
         });
       }
 
+      setBattles(
+        rawBattles.map((b) => ({
+          id:         b.id,
+          date:       b.date?.toDate?.().toISOString().split("T")[0] ?? new Date().toISOString().split("T")[0],
+          habitType:  b.habitType  ?? "Agua",
+          result:     b.result     ?? "Victoria",
+          goldEarned: b.goldEarned ?? 0,
+          xpEarned:   b.xpEarned   ?? 0,
+          userId:     firebaseUser.uid,
+        }))
+      );
+
+      setRanking(
+        rawRanking.map((r, i) => ({
+          rank:        i + 1,
+          userId:      r.id,
+          name:        r.displayName ?? "Héroe",
+          level:       r.heroLevel   ?? 1,
+          gold:        r.heroGold    ?? 0,
+          heroClass:   r.heroClass   ?? "Guerrero",
+          avatarEmoji: "⚔️",
+        }))
+      );
+
       setIsLoadingUser(false);
     });
 
     return () => unsubscribe();
   }, [router]);
+
+  async function handlePurchase(itemId: string, price: number) {
+    if (user.gold < price) return;
+    await spendGold(price);
+    setUser((prev) => ({ ...prev, gold: prev.gold - price }));
+  }
 
   if (isLoadingUser) {
     return (
@@ -91,7 +126,7 @@ export default function DashboardPage() {
         <main className="flex-1 overflow-y-auto px-8 py-8">
           <div className="mx-auto flex max-w-[1600px] flex-col gap-7">
 
-            <WelcomeBanner user={user} weeklyBattles={12} />
+            <WelcomeBanner user={user} weeklyBattles={battles.length} />
 
             <VitalityStats stats={MOCK_VITALITY} />
 
@@ -100,7 +135,7 @@ export default function DashboardPage() {
                 <GeminiOracle initialMessages={MOCK_ORACLE_MESSAGES} />
               </div>
               <div className="col-span-2">
-                <HeroesRanking heroes={MOCK_RANKING} />
+                <HeroesRanking heroes={ranking} />
               </div>
             </div>
 
@@ -110,9 +145,13 @@ export default function DashboardPage() {
               totalSlots={12}
             />
 
-            <BattlesHistory battles={MOCK_BATTLES} />
+            <BattlesHistory battles={battles} />
 
-            <GoldShop items={MOCK_SHOP_ITEMS} userGold={user.gold} />
+            <GoldShop
+              items={MOCK_SHOP_ITEMS}
+              userGold={user.gold}
+              onPurchase={handlePurchase}
+            />
 
           </div>
         </main>
