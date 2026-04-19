@@ -56,8 +56,20 @@ class GameViewModel : ViewModel() {
 
     val currentMonster get() = MONSTERS[monsterIndex]
 
+    var purchasedIds     = mutableStateListOf<String>()
+
+    var ranking          = mutableStateListOf<Map<String, Any>>()
+
+    var isPurchasing     by mutableStateOf(false)
+
+    var isLoadingShop    by mutableStateOf(true)
+
+    var isLoadingRanking by mutableStateOf(true)
+
     init {
         loadUser()
+        loadInventory()
+        loadRanking()
         oracleMessages.add(
             Pair("oracle", "¡Salve, Guerrero Estelar! El cosmos observa tu jornada. ¿Qué hazañas de salud has realizado hoy?")
         )
@@ -79,6 +91,52 @@ class GameViewModel : ViewModel() {
             isLoadingUser = false
         }
     }
+
+    private fun loadInventory() {
+        viewModelScope.launch {
+            val ids = repository.loadInventory()
+            purchasedIds.addAll(ids)
+            isLoadingShop = false
+        }
+    }
+
+    private fun loadRanking() {
+        viewModelScope.launch {
+            val data = repository.loadRanking()
+            ranking.clear()
+            ranking.addAll(data)
+            isLoadingRanking = false
+        }
+    }
+
+    fun purchaseItem(
+        itemId:   String,
+        itemName: String,
+        itemStat: String,
+        emoji:    String,
+        price:    Int,
+    ) {
+        if (isPurchasing) return
+        if (heroGold < price) return
+        if (purchasedIds.contains(itemId)) return
+
+        isPurchasing = true
+        viewModelScope.launch {
+            val success = repository.spendGold(
+                amount   = price,
+                itemId   = itemId,
+                itemName = itemName,
+                itemStat = itemStat,
+                emoji    = emoji,
+            )
+            if (success) {
+                heroGold -= price
+                purchasedIds.add(itemId)
+            }
+            isPurchasing = false
+        }
+    }
+
 
     fun consultOracle(userMessage: String) {
         if (userMessage.isBlank()) return
