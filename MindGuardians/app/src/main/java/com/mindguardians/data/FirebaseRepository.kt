@@ -97,4 +97,45 @@ class FirebaseRepository {
             .await()
         return snapshot.documents.mapNotNull { it.data }
     }
+
+    suspend fun loadInventory(): List<String> {
+        val uid = currentUserId ?: return emptyList()
+        val snapshot = db.collection("users").document(uid)
+            .collection("inventory")
+            .get()
+            .await()
+        return snapshot.documents.mapNotNull { it.getString("id") }
+    }
+
+    suspend fun spendGold(
+        amount:   Int,
+        itemId:   String,
+        itemName: String,
+        itemStat: String,
+        emoji:    String,
+    ): Boolean {
+        val uid = currentUserId ?: return false
+        val userRef  = db.collection("users").document(uid)
+        val snapshot = userRef.get().await()
+        if (!snapshot.exists()) return false
+
+        val currentGold = (snapshot.getLong("heroGold") ?: 0).toInt()
+        if (currentGold < amount) return false
+
+        userRef.update("heroGold", currentGold - amount).await()
+
+        db.collection("users").document(uid)
+            .collection("inventory")
+            .add(mapOf(
+                "id"       to itemId,
+                "name"     to itemName,
+                "stat"     to itemStat,
+                "emoji"    to emoji,
+                "price"    to amount,
+                "purchasedAt" to com.google.firebase.Timestamp.now(),
+            ))
+            .await()
+
+        return true
+    }
 }
