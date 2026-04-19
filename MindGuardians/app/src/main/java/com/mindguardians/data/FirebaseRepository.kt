@@ -5,7 +5,38 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
+// ── Modelo compartido de ítem de tienda ──────────────────────────────────────
+data class ShopItemData(
+    val id:    String,
+    val emoji: String,
+    val name:  String,
+    val stat:  String,
+    val price: Int,
+)
+
+// ── Modelo de ítem de inventario (con fecha de compra) ───────────────────────
+data class InventoryItemData(
+    val docId:       String,
+    val id:          String,
+    val emoji:       String,
+    val name:        String,
+    val stat:        String,
+    val price:       Int,
+    val purchasedAt: com.google.firebase.Timestamp?,
+)
+
+
 class FirebaseRepository {
+
+    // ── Catálogo canónico — FUENTE ÚNICA DE VERDAD para app y web ────────────
+    val catalogItems: List<ShopItemData> = listOf(
+        ShopItemData("shop_01", "🗡️", "Espada del Amanecer", "+10% Daño Agua",  120),
+        ShopItemData("shop_02", "🛡️", "Escudo Estelar",      "+15 HP Máx.",     120),
+        ShopItemData("shop_03", "🪖", "Casco de Claridad",   "+20% Daño Mente", 180),
+        ShopItemData("shop_04", "👟", "Botas del Cosmos",    "+15% Postura",    150),
+        ShopItemData("shop_05", "💎", "Amuleto Galáctico",   "+5% Todo daño",   250),
+        ShopItemData("shop_06", "🔮", "Orbe del Oráculo",    "+2x bonif. IA",   300),
+    )
 
     private val auth = FirebaseAuth.getInstance()
     private val db   = FirebaseFirestore.getInstance()
@@ -13,7 +44,6 @@ class FirebaseRepository {
     val currentUserId: String?
         get() = auth.currentUser?.uid
 
-    // ── Verifica si el displayName ya está en uso por otro usuario ────────────
     suspend fun isDisplayNameTaken(displayName: String): Boolean {
         val snapshot = db.collection("users")
             .whereEqualTo("displayName", displayName)
@@ -23,13 +53,12 @@ class FirebaseRepository {
         return !snapshot.isEmpty
     }
 
-    // ── Crear perfil al registrarse (solo si no existe aún) ───────────────────
     suspend fun createUserProfile(displayName: String) {
         val uid   = currentUserId ?: return
         val email = auth.currentUser?.email ?: ""
 
         val exists = db.collection("users").document(uid).get().await().exists()
-        if (exists) return // ya tiene perfil, no sobreescribir
+        if (exists) return
 
         val data = mapOf(
             "displayName" to displayName,
@@ -98,6 +127,7 @@ class FirebaseRepository {
         return snapshot.documents.mapNotNull { it.data }
     }
 
+    // ── Solo IDs (para filtrar ítems ya comprados en la tienda) ──────────────
     suspend fun loadInventory(): List<String> {
         val uid = currentUserId ?: return emptyList()
         val snapshot = db.collection("users").document(uid)
@@ -105,6 +135,25 @@ class FirebaseRepository {
             .get()
             .await()
         return snapshot.documents.mapNotNull { it.getString("id") }
+    }
+
+    // ── Inventario completo con metadatos (pantalla Inventario) ───────────────
+    suspend fun loadFullInventory(): List<InventoryItemData> {
+        val uid = currentUserId ?: return emptyList()
+        val snapshot = db.collection("users").document(uid)
+            .collection("inventory")
+            .orderBy("purchasedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .get()
+            .await()
+        return snapshot.documents.mapNotNull { doc ->
+            val id    = doc.getString("id")    ?: return@mapNotNull null
+            val name  = doc.getString("name")  ?: return@mapNotNull null
+            val stat  = doc.getString("stat")  ?: return@mapNotNull null
+            val emoji = doc.getString("emoji") ?: "📦"
+            val price = (doc.getLong("price") ?: 0).toInt()
+            val ts    = doc.getTimestamp("purchasedAt")
+            InventoryItemData(doc.id, id, emoji, name, stat, price, ts)
+        }
     }
 
     suspend fun spendGold(
@@ -127,11 +176,11 @@ class FirebaseRepository {
         db.collection("users").document(uid)
             .collection("inventory")
             .add(mapOf(
-                "id"       to itemId,
-                "name"     to itemName,
-                "stat"     to itemStat,
-                "emoji"    to emoji,
-                "price"    to amount,
+                "id"          to itemId,
+                "name"        to itemName,
+                "stat"        to itemStat,
+                "emoji"       to emoji,
+                "price"       to amount,
                 "purchasedAt" to com.google.firebase.Timestamp.now(),
             ))
             .await()
