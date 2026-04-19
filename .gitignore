@@ -1,0 +1,71 @@
+############################
+# VARIABLES DE ENTORNO
+############################
+.env
+.env.*
+*.env
+
+############################
+# NODE / WEB
+############################
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+############################
+# ANDROID / GRADLE
+############################
+.gradle/
+build/
+**/build/
+
+local.properties
+
+.idea/
+*.iml
+
+############################
+# ARCHIVOS SENSIBLES
+############################
+*.keystore
+*.jks
+*.pem
+*.key
+*.p12
+
+google-services.json
+serviceAccountKey.json
+
+############################
+# JSON PRIVADOS
+############################
+*.secret.json
+*.private.json
+
+############################
+# SISTEMA OPERATIVO
+############################
+.DS_Store
+Thumbs.db
+
+############################
+# CACHE / TEMP
+############################
+.cache/
+tmp/
+temp/
+
+############################
+# GENERALES
+############################
+*.log
+*.tmp
+*.swp
