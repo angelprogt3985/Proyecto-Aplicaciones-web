@@ -28,6 +28,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.mindguardians.ui.components.*
 import com.mindguardians.ui.screens.*
 import com.mindguardians.ui.theme.*
+import com.mindguardians.ui.screens.InventoryScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +51,8 @@ private val TABS = listOf(
     TabItem(Screen.SHOP,      "🛍️", "Tienda"),
     TabItem(Screen.RANKING,   "🏆",  "Ranking"),
     TabItem(Screen.ORACLE,    "✨",  "Oráculo"),
-)
+    TabItem(Screen.INVENTORY, "🎒",  "Inventario"),
+    )
 
 // ─── FLUJO DE PANTALLAS AUTH ─────────────────────────────────────────────────
 private enum class AuthScreen { LOGIN, REGISTER }
@@ -131,6 +133,7 @@ private fun GameScreen(
                     Screen.RANKING   -> RankingScreen(vm = vm)
                     Screen.ORACLE    -> OracleScreen(vm)
                     Screen.COMBAT    -> CombatScreen(vm)
+                    Screen.INVENTORY -> InventoryScreen(vm = vm)
                 }
             }
 

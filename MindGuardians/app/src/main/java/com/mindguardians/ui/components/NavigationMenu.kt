@@ -40,7 +40,8 @@ val NAV_ITEMS = listOf(
     NavItem(Screen.SHOP,      "🛍️", "Tienda",          "Equipa a tu héroe",       GoldNeon, badge = "3"),
     NavItem(Screen.RANKING,   "🏆",  "Ranking Global", "Top guerreros del reino", Color(0xFFEF4444)),
     NavItem(Screen.ORACLE,    "✨",  "Oráculo IA",     "Narrador Gemini",         GreenNeon, badge = "!"),
-)
+    NavItem(Screen.INVENTORY, "🎒",  "Inventario",     "Objetos comprados",       PurpleLight),
+    )
 
 @Composable
 fun NavigationMenu(
