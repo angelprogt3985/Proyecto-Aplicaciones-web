@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindguardians.GameViewModel
 import com.mindguardians.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
 @Composable
@@ -108,17 +110,8 @@ fun DashboardScreen(heroGold: Int, heroLevel: Int) {
 // ─── SHOP ────────────────────────────────────────────────────────────────────
 @Composable
 fun ShopScreen(vm: GameViewModel) {
-    data class ShopItem(val id: String, val emoji: String, val name: String, val stat: String, val price: Int)
-
-    val items = listOf(
-        ShopItem("shop_01", "🗡️", "Espada del Amanecer", "+10% Daño Agua",  120),
-        ShopItem("shop_02", "🛡️", "Escudo Estelar",      "+15 HP Máx.",     120),
-        ShopItem("shop_03", "🪖", "Casco de Claridad",   "+20% Daño Mente", 180),
-        ShopItem("shop_04", "👟", "Botas del Cosmos",    "+15% Postura",    150),
-        ShopItem("shop_05", "💎", "Amuleto Galáctico",   "+5% Todo daño",   250),
-        ShopItem("shop_06", "🔮", "Orbe del Oráculo",    "+2x bonif. IA",   300),
-    )
-
+    // Catálogo canónico del repositorio — misma fuente que la web ✅
+    val items     = vm.shopCatalog
     val available = items.filter { !vm.purchasedIds.contains(it.id) }
 
     Column(
@@ -515,6 +508,94 @@ fun OracleScreen(vm: GameViewModel) {
         }
     }
 }
+
+
+// ─── INVENTORY ───────────────────────────────────────────────────────────────
+@Composable
+fun InventoryScreen(vm: GameViewModel) {
+    LaunchedEffect(Unit) { vm.refreshFullInventory() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        ScreenTitle(prefix = "Inventario ", prefixColor = PurpleLight, suffix = "del Héroe")
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(GoldNeon.copy(.1f))
+                .border(1.dp, GoldNeon.copy(.35f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text("💰", fontSize = 28.sp)
+            Column {
+                Text("${vm.heroGold} Oro", color = GoldNeon, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                Text("Disponible · ${vm.purchasedIds.size} objetos comprados", color = Color.White.copy(.4f), fontSize = 11.sp)
+            }
+        }
+
+        if (vm.isLoadingInventory) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = PurpleLight, modifier = Modifier.size(32.dp))
+            }
+        } else if (vm.inventoryItems.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.Black.copy(.3f))
+                    .border(1.dp, PurpleNeon.copy(.2f), RoundedCornerShape(16.dp))
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("Aún no tienes objetos. ¡Ve a la tienda! 🛒", color = TextMuted, fontSize = 13.sp, textAlign = TextAlign.Center)
+            }
+        } else {
+            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            vm.inventoryItems.forEach { item ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Black.copy(.3f))
+                        .border(1.dp, PurpleNeon.copy(.2f), RoundedCornerShape(16.dp))
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(PurpleNeon.copy(.12f))
+                            .border(1.dp, PurpleNeon.copy(.3f), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(item.emoji, fontSize = 28.sp)
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(item.name, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(item.stat, color = PurpleLight, fontSize = 11.sp)
+                        Text(
+                            "Comprado: ${item.purchasedAt?.toDate()?.let { sdf.format(it) } ?: "—"}",
+                            color = Color.White.copy(.3f),
+                            fontSize = 10.sp,
+                        )
+                    }
+                    Text("💰 ${item.price}", color = GoldNeon.copy(.7f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
