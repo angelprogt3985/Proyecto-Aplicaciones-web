@@ -127,8 +127,8 @@ private fun GameScreen(
             Box(modifier = Modifier.weight(1f)) {
                 when (vm.currentScreen) {
                     Screen.DASHBOARD -> DashboardScreen(vm.heroGold, vm.heroLevel)
-                    Screen.SHOP      -> ShopScreen(vm.heroGold)
-                    Screen.RANKING   -> RankingScreen(vm.heroLevel)
+                    Screen.SHOP      -> ShopScreen(vm = vm)
+                    Screen.RANKING   -> RankingScreen(vm = vm)
                     Screen.ORACLE    -> OracleScreen(vm)
                     Screen.COMBAT    -> CombatScreen(vm)
                 }

@@ -107,16 +107,19 @@ fun DashboardScreen(heroGold: Int, heroLevel: Int) {
 
 // ─── SHOP ────────────────────────────────────────────────────────────────────
 @Composable
-fun ShopScreen(heroGold: Int) {
-    data class ShopItem(val emoji: String, val name: String, val stat: String, val price: Int, val owned: Boolean)
+fun ShopScreen(vm: GameViewModel) {
+    data class ShopItem(val id: String, val emoji: String, val name: String, val stat: String, val price: Int)
+
     val items = listOf(
-        ShopItem("🗡️", "Espada del Amanecer", "+10% Daño Agua",  0,   true),
-        ShopItem("🛡️", "Escudo Estelar",      "+15 HP Máx.",     120, false),
-        ShopItem("🪖", "Casco de Claridad",   "+20% Daño Mente", 180, false),
-        ShopItem("👟", "Botas del Cosmos",    "+15% Postura",    150, false),
-        ShopItem("💎", "Amuleto Galáctico",   "+5% Todo daño",   250, false),
-        ShopItem("🔮", "Orbe del Oráculo",    "+2x bonif. IA",   300, false),
+        ShopItem("shop_01", "🗡️", "Espada del Amanecer", "+10% Daño Agua",  120),
+        ShopItem("shop_02", "🛡️", "Escudo Estelar",      "+15 HP Máx.",     120),
+        ShopItem("shop_03", "🪖", "Casco de Claridad",   "+20% Daño Mente", 180),
+        ShopItem("shop_04", "👟", "Botas del Cosmos",    "+15% Postura",    150),
+        ShopItem("shop_05", "💎", "Amuleto Galáctico",   "+5% Todo daño",   250),
+        ShopItem("shop_06", "🔮", "Orbe del Oráculo",    "+2x bonif. IA",   300),
     )
+
+    val available = items.filter { !vm.purchasedIds.contains(it.id) }
 
     Column(
         modifier = Modifier
@@ -139,65 +142,96 @@ fun ShopScreen(heroGold: Int) {
         ) {
             Text("💰", fontSize = 28.sp)
             Column {
-                Text("$heroGold Oro", color = GoldNeon, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                Text("${vm.heroGold} Oro", color = GoldNeon, fontWeight = FontWeight.Black, fontSize = 20.sp)
                 Text("Disponible", color = Color.White.copy(.4f), fontSize = 11.sp)
             }
         }
 
-        val rows = items.chunked(2)
-        rows.forEach { rowItems ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                rowItems.forEach { item ->
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.Black.copy(.35f))
-                            .border(1.dp, if (item.owned) GreenNeon.copy(.4f) else PurpleNeon.copy(.25f), RoundedCornerShape(16.dp))
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(item.emoji, fontSize = 36.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Text(item.name, color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                            Text(item.stat, color = PurpleLight, fontSize = 11.sp, modifier = Modifier.padding(vertical = 4.dp))
-                            if (item.owned) {
-                                Box(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(GreenNeon.copy(.1f)).border(1.dp, GreenNeon.copy(.3f), RoundedCornerShape(50.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                                    Text("✓ Equipado", color = GreenNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            } else {
-                                Box(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(GoldNeon.copy(.1f)).border(1.dp, GoldNeon.copy(.3f), RoundedCornerShape(50.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                                    Text("💰 ${item.price}", color = GoldNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        if (vm.isLoadingShop) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = GoldNeon, modifier = Modifier.size(32.dp))
+            }
+        } else if (available.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.Black.copy(.3f))
+                    .border(1.dp, GoldNeon.copy(.2f), RoundedCornerShape(16.dp))
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("¡Has comprado todo el equipo disponible! 🏆", color = GoldNeon, fontSize = 13.sp, textAlign = TextAlign.Center)
+            }
+        } else {
+            val rows = available.chunked(2)
+            rows.forEach { rowItems ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    rowItems.forEach { item ->
+                        val canAfford = vm.heroGold >= item.price
+                        val isBlocked = vm.isPurchasing
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.Black.copy(.35f))
+                                .border(1.dp, if (canAfford) PurpleNeon.copy(.25f) else Color.White.copy(.1f), RoundedCornerShape(16.dp))
+                                .then(if (canAfford && !isBlocked) Modifier.clickable {
+                                    vm.purchaseItem(item.id, item.name, item.stat, item.emoji, item.price)
+                                } else Modifier)
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(item.emoji, fontSize = 36.sp)
+                                Spacer(Modifier.height(8.dp))
+                                Text(item.name, color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                                Text(item.stat, color = PurpleLight, fontSize = 11.sp, modifier = Modifier.padding(vertical = 4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50.dp))
+                                        .background(if (canAfford) GoldNeon.copy(.1f) else Color.White.copy(.05f))
+                                        .border(1.dp, if (canAfford) GoldNeon.copy(.3f) else Color.White.copy(.1f), RoundedCornerShape(50.dp))
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        if (isBlocked && canAfford) "..." else "💰 ${item.price}",
+                                        color = if (canAfford) GoldNeon else Color.White.copy(.3f),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    )
                                 }
                             }
                         }
                     }
+                    if (rowItems.size == 1) Spacer(Modifier.weight(1f))
                 }
-                if (rowItems.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+
+        if (vm.purchasedIds.isNotEmpty()) {
+            DarkCard(borderColor = GreenNeon.copy(.3f)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("✓ EQUIPADO", color = GreenNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    items.filter { vm.purchasedIds.contains(it.id) }.forEach { item ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("${item.emoji} ${item.name}", color = TextWhite, fontSize = 12.sp)
+                            Text(item.stat, color = GreenNeon, fontSize = 11.sp)
+                        }
+                    }
+                }
             }
         }
     }
 }
-
 // ─── RANKING ─────────────────────────────────────────────────────────────────
 @Composable
-fun RankingScreen(heroLevel: Int) {
-    data class PodiumEntry(val pos: Int, val emoji: String, val name: String, val level: Int, val color: Color)
-    data class RankEntry(val rank: Int, val emoji: String, val name: String, val level: Int, val xp: String, val me: Boolean)
-
-    val podium = listOf(
-        PodiumEntry(2, "🧙", "Vortex_X",  12, Color(0xFF475569)),
-        PodiumEntry(1, "🦁", "LionHeart", 18, Color(0xFFCA8A04)),
-        PodiumEntry(3, "🧝", "StellaR",   10, Color(0xFFC2410C)),
-    )
-    val rankList = listOf(
-        RankEntry(4, "⚡", "ThunderK",         9,         "2,840", false),
-        RankEntry(5, "🌿", "NatureG",          8,         "2,510", false),
-        RankEntry(6, "⚔️", "PaladinUrb (Tú)", heroLevel, "2,140", true),
-        RankEntry(7, "🔥", "FireMind",         6,         "1,980", false),
-    )
-
+fun RankingScreen(vm: GameViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -207,66 +241,110 @@ fun RankingScreen(heroLevel: Int) {
     ) {
         ScreenTitle(prefix = "Ranking ", prefixColor = Color(0xFFEF4444), suffix = "Global")
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            podium.forEach { p ->
-                val isFirst = p.pos == 1
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(if (isFirst) 52.dp else 44.dp)
-                            .clip(CircleShape)
-                            .background(SpaceDeep)
-                            .border(2.dp, if (isFirst) GoldNeon else Color.White.copy(.2f), CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(p.emoji, fontSize = if (isFirst) 26.sp else 22.sp)
+        if (vm.isLoadingRanking) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color(0xFFEF4444), modifier = Modifier.size(32.dp))
+            }
+        } else if (vm.ranking.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.Black.copy(.3f))
+                    .border(1.dp, PurpleNeon.copy(.2f), RoundedCornerShape(16.dp))
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("No hay héroes en el ranking aún.", color = TextMuted, fontSize = 13.sp)
+            }
+        } else {
+            val emojis = listOf("🦁", "🧙", "🧝", "⚡", "🌿", "⚔️", "🔥", "✨", "🏹", "🌟")
+            val podiumEntries = vm.ranking.take(3)
+            val listEntries   = vm.ranking.drop(3)
+
+            val podiumOrder = when (podiumEntries.size) {
+                1 -> listOf(0)
+                2 -> listOf(1, 0)
+                else -> listOf(1, 0, 2)
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                podiumOrder.forEach { idx ->
+                    val entry    = podiumEntries[idx]
+                    val name     = (entry["displayName"] as? String) ?: "Héroe"
+                    val level    = (entry["heroLevel"]   as? Long)?.toInt() ?: 1
+                    val pos      = idx + 1
+                    val isFirst  = pos == 1
+                    val podColor = when (pos) {
+                        1    -> Color(0xFFCA8A04)
+                        2    -> Color(0xFF475569)
+                        else -> Color(0xFFC2410C)
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text(p.name,           color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                    Text("Nv. ${p.level}", color = TextMuted, fontSize = 10.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(if (isFirst) 70.dp else if (p.pos == 2) 50.dp else 34.dp)
-                            .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                            .background(p.color),
-                        contentAlignment = Alignment.Center,
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(p.pos.toString(), color = TextWhite, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                        Box(
+                            modifier = Modifier
+                                .size(if (isFirst) 52.dp else 44.dp)
+                                .clip(CircleShape)
+                                .background(SpaceDeep)
+                                .border(2.dp, if (isFirst) GoldNeon else Color.White.copy(.2f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(emojis.getOrElse(idx) { "⚔️" }, fontSize = if (isFirst) 26.sp else 22.sp)
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(name, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        Text("Nv. $level", color = TextMuted, fontSize = 10.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(if (isFirst) 70.dp else if (pos == 2) 50.dp else 34.dp)
+                                .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                                .background(podColor),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(pos.toString(), color = TextWhite, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                        }
                     }
                 }
             }
-        }
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            rankList.forEach { r ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(if (r.me) CyanNeon.copy(.06f) else Color.Black.copy(.25f))
-                        .border(1.dp, if (r.me) CyanNeon.copy(.4f) else PurpleNeon.copy(.15f), RoundedCornerShape(16.dp))
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(r.rank.toString(), color = if (r.me) CyanNeon else Color.White.copy(.3f), fontWeight = FontWeight.Black, fontSize = 13.sp, modifier = Modifier.width(20.dp))
-                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(SpaceDeep).border(1.dp, PurpleNeon.copy(.3f), CircleShape), contentAlignment = Alignment.Center) {
-                        Text(r.emoji, fontSize = 20.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listEntries.forEachIndexed { i, entry ->
+                    val rank    = i + 4
+                    val name    = (entry["displayName"] as? String) ?: "Héroe"
+                    val level   = (entry["heroLevel"]   as? Long)?.toInt() ?: 1
+                    val totalXp = (entry["totalXp"]     as? Long) ?: 0
+                    val isMe    = entry["displayName"] == vm.heroName
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (isMe) CyanNeon.copy(.06f) else Color.Black.copy(.25f))
+                            .border(1.dp, if (isMe) CyanNeon.copy(.4f) else PurpleNeon.copy(.15f), RoundedCornerShape(16.dp))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(rank.toString(), color = if (isMe) CyanNeon else Color.White.copy(.3f), fontWeight = FontWeight.Black, fontSize = 13.sp, modifier = Modifier.width(20.dp))
+                        Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(SpaceDeep).border(1.dp, PurpleNeon.copy(.3f), CircleShape), contentAlignment = Alignment.Center) {
+                            Text(emojis.getOrElse(i + 3) { "⚔️" }, fontSize = 20.sp)
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(if (isMe) "$name (Tú)" else name, color = if (isMe) CyanNeon else Color(0xFFE2E8F0), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Nv. $level", color = TextMuted, fontSize = 10.sp)
+                        }
+                        Text("$totalXp XP", color = PurpleLight, fontWeight = FontWeight.Black, fontSize = 13.sp)
                     }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(r.name, color = if (r.me) CyanNeon else Color(0xFFE2E8F0), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text("Nv. ${r.level}", color = TextMuted, fontSize = 10.sp)
-                    }
-                    Text("${r.xp} XP", color = PurpleLight, fontWeight = FontWeight.Black, fontSize = 13.sp)
                 }
             }
         }
