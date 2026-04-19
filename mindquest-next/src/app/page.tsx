@@ -16,7 +16,7 @@ import { EquipmentInventory } from "@/components/inventory/EquipmentInventory";
 import { BattlesHistory }     from "@/components/battles/BattlesHistory";
 import { GoldShop }           from "@/components/shop/GoldShop";
 
-import { loadUserData, loadBattles, loadRanking, spendGold } from "@/lib/firestore";
+import { loadUserData, loadBattles, loadRanking, spendGold, loadInventory} from "@/lib/firestore";
 import { auth } from "@/lib/firebase";
 
 import {
@@ -28,6 +28,8 @@ import {
   MOCK_ORACLE_MESSAGES,
 } from "@/lib/data/mock";
 
+
+
 export default function DashboardPage() {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<NavSection>("dashboard");
@@ -35,6 +37,7 @@ export default function DashboardPage() {
   const [battles, setBattles]             = useState<BattleRecord[]>([]);
   const [ranking, setRanking]             = useState<RankedHero[]>([]);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
@@ -43,10 +46,11 @@ export default function DashboardPage() {
         return;
       }
 
-      const [data, rawBattles, rawRanking] = await Promise.all([
+      const [data, rawBattles, rawRanking, inventoryIds] = await Promise.all([
         loadUserData(),
         loadBattles(),
         loadRanking(),
+        loadInventory(),
       ]);
 
       if (data) {
@@ -85,6 +89,8 @@ export default function DashboardPage() {
           avatarEmoji: "⚔️",
         }))
       );
+      
+      setPurchasedIds(inventoryIds);
 
       setIsLoadingUser(false);
     });
@@ -104,6 +110,7 @@ export default function DashboardPage() {
       iconName:    item.iconName,
     });
     setUser((prev) => ({ ...prev, gold: prev.gold - item.price }));
+    setPurchasedIds((prev) => [...prev, item.id]);
   }
 
   if (isLoadingUser) {
@@ -147,7 +154,15 @@ export default function DashboardPage() {
             </div>
 
             <EquipmentInventory
-              equipment={MOCK_EQUIPMENT}
+              equipment={MOCK_SHOP_ITEMS.filter((i) => purchasedIds.includes(i.id)).map((i) => ({
+                id:       i.id,
+                name:     i.name,
+                type:     i.category as "weapon" | "armor" | "accessory",
+                rarity:   i.rarity,
+                stats:    i.stats,
+                locked:   false,
+                iconName: i.iconName,
+              }))}
               activeSet={MOCK_EQUIPMENT_SET}
               totalSlots={12}
             />
@@ -155,9 +170,10 @@ export default function DashboardPage() {
             <BattlesHistory battles={battles} />
 
           <GoldShop
-          items={MOCK_SHOP_ITEMS}
-          userGold={user.gold}
-          onPurchase={handlePurchase}
+            items={MOCK_SHOP_ITEMS}
+            userGold={user.gold}
+            onPurchase={handlePurchase}
+            purchasedIds={purchasedIds}
           />
 
           </div>

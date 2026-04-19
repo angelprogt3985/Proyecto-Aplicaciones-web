@@ -30,14 +30,14 @@ interface GoldShopProps {
   items:      ShopItem[];
   userGold:   number;
   onPurchase: (item: ShopItem) => Promise<void>;
+  purchasedIds: string[];
 }
 
-export function GoldShop({ items, userGold, onPurchase }: GoldShopProps) {
+export function GoldShop({ items, userGold, onPurchase, purchasedIds}: GoldShopProps) {
   const [category, setCategory]       = useState<ShopCategoryFilter>("all");
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
-
   const filtered = items.filter(
-    (i) => category === "all" || i.category === category
+  (i) => (category === "all" || i.category === category) && !purchasedIds.includes(i.id)
   );
 
   const handlePurchase = async (item: ShopItem) => {

@@ -12,6 +12,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
+import { ShopItemCategory, EquipmentRarity } from "./types";
 
 // Leer datos del usuario actual
 export async function loadUserData(): Promise<Record<string, any> | null> {
@@ -78,7 +79,7 @@ export async function loadBattles(): Promise<Record<string, any>[]> {
 }
 
 // Descontar oro del usuario al comprar en la tienda
-export async function spendGold(amount: number): Promise<void> {
+export async function spendGold(amount: number, p0: { id: string; name: string; description: string; category: ShopItemCategory; rarity: EquipmentRarity; stats: Record<string, number>; iconName: string; }): Promise<void> {
   const uid = auth.currentUser?.uid;
   if (!uid) return;
 
@@ -90,4 +91,13 @@ export async function spendGold(amount: number): Promise<void> {
   if (currentGold < amount) return;
 
   await updateDoc(userRef, { heroGold: currentGold - amount });
+}
+
+// Leer inventario del usuario
+export async function loadInventory(): Promise<string[]> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return [];
+
+  const snap = await getDocs(collection(db, "users", uid, "inventory"));
+  return snap.docs.map((d) => d.data().id as string);
 }
