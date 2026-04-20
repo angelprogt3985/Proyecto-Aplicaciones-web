@@ -23,7 +23,7 @@ import com.mindguardians.ui.theme.*
 @Composable
 fun BattleLog(messages: List<BattleMessage>) {
     val listState = rememberLazyListState()
-    val recent = messages.takeLast(5)
+    val recent = messages.takeLast(10)
 
     LaunchedEffect(messages.size) {
         if (recent.isNotEmpty()) listState.animateScrollToItem(recent.size - 1)
@@ -32,14 +32,13 @@ fun BattleLog(messages: List<BattleMessage>) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .height(220.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Color(0x4D000000))
             .border(2.dp, BorderPurple, RoundedCornerShape(16.dp))
             .padding(16.dp),
     ) {
         Column {
-            // Header
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -62,9 +61,18 @@ fun BattleLog(messages: List<BattleMessage>) {
             Spacer(Modifier.height(8.dp))
 
             if (recent.isEmpty()) {
-                Text("⭐ ¡Listo para la aventura!", color = CyanNeon, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, fontSize = 13.sp)
+                Text(
+                    "⭐ ¡Listo para la aventura!",
+                    color = CyanNeon,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    fontSize = 13.sp,
+                )
             } else {
-                LazyColumn(state = listState) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     items(recent) { msg ->
                         val (emoji, color) = when (msg.type) {
                             MessageType.DAMAGE -> "💥" to CyanNeon
@@ -72,12 +80,19 @@ fun BattleLog(messages: List<BattleMessage>) {
                             MessageType.INFO   -> "✨" to PurpleLight
                         }
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(bottom = 4.dp),
+                            verticalAlignment = Alignment.Top,
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(emoji, fontSize = 14.sp)
                             Spacer(Modifier.width(6.dp))
-                            Text(msg.text, color = color, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            Text(
+                                msg.text,
+                                color = color,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp,
+                                modifier = Modifier.weight(1f),
+                            )
                         }
                     }
                 }
