@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Filter, Droplet, Users, Brain, CalendarDays } from "lucide-react";
+import { Filter, Droplet, Users, Brain, CalendarDays, Shield, Zap, Flame, Swords } from "lucide-react";
 import type {
   BattleRecord,
   HabitFilter,
@@ -10,11 +10,19 @@ import type {
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-const HABIT_STYLES = {
-  Agua:    { bg: "bg-[#1e3a5f]", text: "text-mq-blue",   border: "border-mq-blue/40",   icon: Droplet },
-  Postura: { bg: "bg-[#3d3020]", text: "text-mq-gold",   border: "border-mq-gold/40",   icon: Users   },
-  Mente:   { bg: "bg-[#3d2d5f]", text: "text-mq-purple", border: "border-mq-purple/40", icon: Brain   },
-} as const;
+const HABIT_STYLES: Record<string, { bg: string; text: string; border: string; icon: React.ComponentType<{ className?: string }> }> = {
+  // Hábitos web
+  Agua:            { bg: "bg-[#1e3a5f]", text: "text-mq-blue",   border: "border-mq-blue/40",   icon: Droplet  },
+  Postura:         { bg: "bg-[#3d3020]", text: "text-mq-gold",   border: "border-mq-gold/40",   icon: Users    },
+  Mente:           { bg: "bg-[#3d2d5f]", text: "text-mq-purple", border: "border-mq-purple/40", icon: Brain    },
+  // Monstruos base Android
+  "Gravedad Pesada": { bg: "bg-[#1a2e1a]", text: "text-mq-teal",  border: "border-mq-teal/40",   icon: Shield   },
+  "Vacío Estelar":   { bg: "bg-[#1e1e3f]", text: "text-mq-blue",  border: "border-mq-blue/40",   icon: Zap      },
+  "Caos Cósmico":    { bg: "bg-[#3d1a1a]", text: "text-mq-red",   border: "border-mq-red/40",    icon: Flame    },
+  // Combate genérico y jefes generados por Gemini (fallback)
+  Combate:         { bg: "bg-[#2a1a3d]", text: "text-mq-purple", border: "border-mq-purple/40", icon: Swords   },
+  default:         { bg: "bg-[#1a1a2e]", text: "text-mq-muted",  border: "border-mq-muted/40",  icon: Filter   },
+};
 
 interface BattlesHistoryProps {
   battles: BattleRecord[];
@@ -139,7 +147,7 @@ export function BattlesHistory({ battles }: BattlesHistoryProps) {
               </tr>
             ) : (
               filtered.map((b) => {
-                const habit = HABIT_STYLES[b.habitType];
+                const habit = HABIT_STYLES[b.habitType] || HABIT_STYLES["default"];
                 const HabitIcon = habit.icon;
                 return (
                   <tr key={b.id} className="transition-colors hover:bg-mq-bg">
