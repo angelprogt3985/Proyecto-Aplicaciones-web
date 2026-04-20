@@ -31,6 +31,7 @@ class GameViewModel : ViewModel() {
     private val geminiRepository = GeminiRepository()
 
     var heroHp        by mutableIntStateOf(100)
+    var heroMaxHP     by mutableIntStateOf(100)
     var heroLevel     by mutableIntStateOf(1)
     var heroXp        by mutableIntStateOf(0)
     var heroGold      by mutableIntStateOf(0)
@@ -43,6 +44,8 @@ class GameViewModel : ViewModel() {
     private val monsterQueue = mutableStateListOf<Monster>().also { it.addAll(MONSTERS) }
 
     var monsterHp     by mutableIntStateOf(MONSTERS[0].maxHp)
+
+    var isBusy          by mutableStateOf(false)
     var isAttacking   by mutableStateOf(false)
     var isVictory     by mutableStateOf(false)
     var menuOpen      by mutableStateOf(false)
@@ -95,6 +98,7 @@ class GameViewModel : ViewModel() {
                 heroXp    = (data["heroXp"]    as? Long)?.toInt() ?: 0
                 heroGold  = (data["heroGold"]  as? Long)?.toInt() ?: 0
                 heroHp    = (data["heroHp"]    as? Long)?.toInt() ?: 100
+                heroMaxHP    = (data["heroMaxHP"]    as? Long)?.toInt() ?: 100
                 // Prioridad: Firestore > Firebase Auth > fallback
                 val nameFromFirestore = (data["displayName"] as? String)?.takeIf { it.isNotBlank() }
                 val nameFromAuth = FirebaseAuth.getInstance().currentUser?.displayName?.takeIf { it.isNotBlank() }
@@ -173,7 +177,8 @@ class GameViewModel : ViewModel() {
     }
 
     fun attack(damage: Int, actionName: String) {
-        if (monsterHp <= 0 || isMonsterActing) return
+        if (isBusy || monsterHp <= 0 || isDefeat) return
+        isBusy = true
         val finalDamage = if (bonusActive) (damage * 1.5).toInt() else damage
         bonusActive = false
         isAttacking = true
@@ -196,6 +201,7 @@ class GameViewModel : ViewModel() {
             isAttacking = false
             if (newMonsterHp <= 0) {
                 isVictory = true
+                isBusy    = false
                 addLog("¡${currentMonster.name} derrotado!", MessageType.REWARD)
                 return@launch
             }
@@ -215,6 +221,7 @@ class GameViewModel : ViewModel() {
         heroHp = newHeroHp
         addLog(narration, MessageType.INFO)
         isMonsterActing = false
+        isBusy          = false
         if (newHeroHp <= 0) {
             isDefeat = true
             addLog("¡Has caído en combate!", MessageType.DAMAGE)
@@ -233,8 +240,9 @@ class GameViewModel : ViewModel() {
                 heroLevel = heroLevel,
                 heroXp    = heroXp,
                 heroGold  = heroGold,
-                heroHp    = heroHp,
+                heroHp    = heroMaxHP,
                 totalXp   = heroXp + (heroLevel - 1) * 100,
+                heroMaxHP = heroMaxHP,
             )
         }
     }
@@ -244,7 +252,8 @@ class GameViewModel : ViewModel() {
         val xp   = if (currentMonster.isBoss) 80 else 30 + (monsterQueue.size % MONSTERS.size) * 15
         heroGold += gold
         heroXp   += xp
-        if (heroXp >= 100) { heroLevel++; heroXp -= 100 }
+        heroHp    = heroMaxHP
+        if (heroXp >= 100) { heroLevel++; heroXp -= 100; heroMaxHP += 10}
         isVictory = false
 
         viewModelScope.launch {
@@ -257,8 +266,9 @@ class GameViewModel : ViewModel() {
                 heroLevel = heroLevel,
                 heroXp    = heroXp,
                 heroGold  = heroGold,
-                heroHp    = heroHp,
+                heroHp    = heroMaxHP,
                 totalXp   = heroXp + (heroLevel - 1) * 100,
+                heroMaxHP = heroMaxHP,
             )
         }
     }

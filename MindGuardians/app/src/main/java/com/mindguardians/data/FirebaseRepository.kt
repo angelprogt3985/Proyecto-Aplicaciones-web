@@ -39,6 +39,7 @@ class FirebaseRepository {
             "heroGold"    to 0,
             "heroHp"      to 100,
             "totalXp"     to 0,
+            "heroMaxHP"   to 100,
         )
         db.collection("users").document(uid).set(data).await()
     }
@@ -55,6 +56,7 @@ class FirebaseRepository {
         heroGold:  Int,
         heroHp:    Int,
         totalXp:   Int,
+        heroMaxHP: Int,
     ) {
         val uid = currentUserId ?: return
         val data = mapOf(
@@ -63,6 +65,7 @@ class FirebaseRepository {
             "heroGold"  to heroGold,
             "heroHp"    to heroHp,
             "totalXp"   to totalXp,
+            "heroMaxHP" to heroMaxHP,
         )
         db.collection("users").document(uid)
             .set(data, SetOptions.merge())

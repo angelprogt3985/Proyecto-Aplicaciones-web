@@ -157,6 +157,11 @@ private fun GameScreen(
             goldEarned  = vm.goldReward(),
             xpEarned    = vm.xpReward(),
         )
+
+        DefeatModal(
+            isOpen    = vm.isDefeat,
+            onRecover = { vm.recoverAfterDefeat() },
+        )
     }
 }
 
@@ -285,7 +290,7 @@ fun TabBar(current: Screen, onChange: (Screen) -> Unit) {
     }
 }
 
-// ─── FOOTER ──────────────────────────────────────────────────────────────────
+
 @Composable
 fun AppFooter() {
     Box(
@@ -309,13 +314,33 @@ fun CombatScreen(vm: GameViewModel) {
     ) {
         item {
             HeroStats(
-                hp = vm.heroHp, maxHp = 100,
+                hp = vm.heroHp, maxHp = vm.heroMaxHP,
                 level = vm.heroLevel,
                 xp = vm.heroXp, maxXp = 100,
                 gold = vm.heroGold,
             )
         }
         item {
+            if (vm.currentMonster.isBoss) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFEF4444).copy(alpha = .15f))
+                        .border(1.dp, Color(0xFFEF4444).copy(.5f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "BOSS BATTLE",
+                        color = Color(0xFFEF4444),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp,
+                        letterSpacing = 2.sp,
+                    )
+                }
+            }
             MonsterCard(
                 name        = vm.currentMonster.name,
                 hp          = vm.monsterHp,
@@ -323,17 +348,46 @@ fun CombatScreen(vm: GameViewModel) {
                 type        = vm.currentMonster.type,
                 isAttacking = vm.isAttacking,
             )
+
         }
         item {
             BattleLog(messages = vm.battleLog)
+        }
+
+        if (vm.bonusActive) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(GoldNeon.copy(alpha = .15f))
+                        .border(1.dp, GoldNeon.copy(.6f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "⚡ PODER x1.5 ACTIVO — Úsalo en tu próximo ataque",
+                        color = GoldNeon,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp,
+                        letterSpacing = .5.sp,
+                    )
+                }
+            }
         }
         item {
             ActionButtons(
                 onWaterAttack   = { vm.attack(15, "Supernova de Agua") },
                 onStretchAttack = { vm.attack(20, "Salto Galáctico") },
                 onMindAttack    = { vm.attack(25, "Zen Cósmico") },
-                disabled        = vm.monsterHp <= 0,
-            )
+                disabled        = vm.isBusy || vm.monsterHp <= 0 || vm.isDefeat,
+                )
+        }
+        item {
+            ReportPanel(vm = vm)
         }
     }
+
 }
+
+
