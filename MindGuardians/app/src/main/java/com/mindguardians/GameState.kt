@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.mindguardians.data.FirebaseRepository
+import com.mindguardians.data.InventoryItemData
 import com.mindguardians.data.GeminiRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -17,7 +18,8 @@ data class Monster(val name: String, val type: String, val maxHp: Int, val isBos
 data class BattleMessage(val id: String, val text: String, val type: MessageType)
 
 enum class MessageType { DAMAGE, REWARD, INFO }
-enum class Screen { COMBAT, DASHBOARD, SHOP, RANKING, ORACLE }
+// INVENTORY es nuevo aquí ↓
+enum class Screen { COMBAT, DASHBOARD, SHOP, RANKING, ORACLE, INVENTORY }
 
 val MONSTERS = listOf(
     Monster("Titán del Sedentarismo", "Gravedad Pesada", 100),
@@ -30,6 +32,13 @@ class GameViewModel : ViewModel() {
     private val repository       = FirebaseRepository()
     private val geminiRepository = GeminiRepository()
 
+    var heroHp    by mutableIntStateOf(100)
+    var heroLevel by mutableIntStateOf(1)
+    var heroXp    by mutableIntStateOf(0)
+    var heroGold  by mutableIntStateOf(0)
+    // totalXp acumulado históricamente — nunca se resetea al subir de nivel
+    var totalXp   by mutableIntStateOf(0)
+    var heroName  by mutableStateOf(
     var heroHp        by mutableIntStateOf(100)
     var heroMaxHP     by mutableIntStateOf(100)
     var heroLevel     by mutableIntStateOf(1)
@@ -60,15 +69,20 @@ class GameViewModel : ViewModel() {
 
     val currentMonster get() = monsterQueue.firstOrNull() ?: MONSTERS[0]
 
-    var purchasedIds     = mutableStateListOf<String>()
+    // IDs comprados (filtra la tienda)
+    var purchasedIds = mutableStateListOf<String>()
 
-    var ranking          = mutableStateListOf<Map<String, Any>>()
+    // Inventario completo con metadatos (pantalla Inventario)
+    var inventoryItems = mutableStateListOf<InventoryItemData>()
 
-    var isPurchasing     by mutableStateOf(false)
+    var ranking            = mutableStateListOf<Map<String, Any>>()
+    var isPurchasing       by mutableStateOf(false)
+    var isLoadingShop      by mutableStateOf(true)
+    var isLoadingRanking   by mutableStateOf(true)
+    var isLoadingInventory by mutableStateOf(false)
 
-    var isLoadingShop    by mutableStateOf(true)
-
-    var isLoadingRanking by mutableStateOf(true)
+    // Catálogo viene del repositorio — fuente única de verdad
+    val shopCatalog get() = repository.catalogItems
 
     var bonusActive     by mutableStateOf(false)
 
@@ -98,8 +112,8 @@ class GameViewModel : ViewModel() {
                 heroXp    = (data["heroXp"]    as? Long)?.toInt() ?: 0
                 heroGold  = (data["heroGold"]  as? Long)?.toInt() ?: 0
                 heroHp    = (data["heroHp"]    as? Long)?.toInt() ?: 100
-                heroMaxHP    = (data["heroMaxHP"]    as? Long)?.toInt() ?: 100
-                // Prioridad: Firestore > Firebase Auth > fallback
+                totalXp   = (data["totalXp"]   as? Long)?.toInt() ?: 0
+                    // Prioridad: Firestore > Firebase Auth > fallback
                 val nameFromFirestore = (data["displayName"] as? String)?.takeIf { it.isNotBlank() }
                 val nameFromAuth = FirebaseAuth.getInstance().currentUser?.displayName?.takeIf { it.isNotBlank() }
                 heroName = nameFromFirestore ?: nameFromAuth ?: "Guerrero"
@@ -113,6 +127,16 @@ class GameViewModel : ViewModel() {
             val ids = repository.loadInventory()
             purchasedIds.addAll(ids)
             isLoadingShop = false
+        }
+    }
+
+    fun refreshFullInventory() {
+        isLoadingInventory = true
+        viewModelScope.launch {
+            val items = repository.loadFullInventory()
+            inventoryItems.clear()
+            inventoryItems.addAll(items)
+            isLoadingInventory = false
         }
     }
 
@@ -152,7 +176,6 @@ class GameViewModel : ViewModel() {
             isPurchasing = false
         }
     }
-
 
     fun consultOracle(userMessage: String) {
         if (userMessage.isBlank()) return
@@ -248,6 +271,15 @@ class GameViewModel : ViewModel() {
     }
 
     fun continueAfterVictory() {
+        val gold = goldReward()
+        val xp   = xpReward()
+        heroGold += gold
+        heroXp   += xp
+        totalXp  += xp   // acumula sin resetearse al subir de nivel ✅
+        if (heroXp >= 100) { heroLevel++; heroXp -= 100 }
+        isVictory    = false
+        monsterIndex = (monsterIndex + 1) % MONSTERS.size
+        monsterHp    = MONSTERS[monsterIndex].maxHp
         val gold = if (currentMonster.isBoss) 60 else 20 + (monsterQueue.size % MONSTERS.size) * 10
         val xp   = if (currentMonster.isBoss) 80 else 30 + (monsterQueue.size % MONSTERS.size) * 15
         heroGold += gold
@@ -266,6 +298,15 @@ class GameViewModel : ViewModel() {
                 heroLevel = heroLevel,
                 heroXp    = heroXp,
                 heroGold  = heroGold,
+                heroHp    = heroHp,
+                totalXp   = totalXp,
+            )
+        }
+    }
+
+    fun goldReward() = 20 + monsterIndex * 10
+    fun xpReward()   = 30 + monsterIndex * 15
+
                 heroHp    = heroMaxHP,
                 totalXp   = heroXp + (heroLevel - 1) * 100,
                 heroMaxHP = heroMaxHP,
