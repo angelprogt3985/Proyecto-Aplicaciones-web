@@ -101,3 +101,48 @@ export async function loadInventory(): Promise<string[]> {
   const snap = await getDocs(collection(db, "users", uid, "inventory"));
   return snap.docs.map((d) => d.data().id as string);
 }
+// ─── Vitality Stats ───────────────────────────────────────────────────────────
+
+export interface VitalityEntry {
+  date: string;
+  weightLossKg: number;
+  activityMinutes: number;
+}
+
+export async function saveVitalityEntry(entry: VitalityEntry): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return;
+  await setDoc(
+    doc(db, "users", uid, "vitality", entry.date),
+    { ...entry },
+    { merge: true }
+  );
+}
+
+export async function loadWeeklyVitality(): Promise<VitalityEntry[]> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return [];
+
+  const today = new Date();
+  const dates: string[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().split("T")[0]);
+  }
+
+  const entries: VitalityEntry[] = [];
+  for (const date of dates) {
+    try {
+      const snap = await getDoc(doc(db, "users", uid, "vitality", date));
+      if (snap.exists()) {
+        entries.push(snap.data() as VitalityEntry);
+      } else {
+        entries.push({ date, weightLossKg: 0, activityMinutes: 0 });
+      }
+    } catch {
+      entries.push({ date, weightLossKg: 0, activityMinutes: 0 });
+    }
+  }
+  return entries;
+}
