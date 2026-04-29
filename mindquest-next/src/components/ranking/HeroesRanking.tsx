@@ -3,6 +3,7 @@ import type { RankedHero } from "@/lib/types";
 
 interface HeroesRankingProps {
   heroes: RankedHero[];
+  onViewAll?: () => void;
 }
 
 function RankBadge({ rank }: { rank: number }) {
@@ -12,7 +13,7 @@ function RankBadge({ rank }: { rank: number }) {
   return <span className="text-sm text-mq-muted">#{rank}</span>;
 }
 
-export function HeroesRanking({ heroes }: HeroesRankingProps) {
+export function HeroesRanking({ heroes, onViewAll }: HeroesRankingProps) {
   return (
     <div className="relative overflow-hidden rounded-xl border border-mq-blue/25 bg-mq-card p-6 shadow-lg">
       {/* Glow */}
@@ -28,8 +29,7 @@ export function HeroesRanking({ heroes }: HeroesRankingProps) {
             Los mejores aventureros de la semana
           </p>
         </div>
-        {/* TODO: link to /ranking full page */}
-        <button className="rounded-xl bg-mq-blue px-4 py-2 text-sm font-semibold text-mq-bg shadow-md shadow-mq-blue/25 transition-colors hover:bg-mq-blue2">
+        <button onClick={onViewAll} className="rounded-xl bg-mq-blue px-4 py-2 text-sm font-semibold text-mq-bg shadow-md shadow-mq-blue/25 transition-colors hover:bg-mq-blue2">
           Ver Todos
         </button>
       </div>

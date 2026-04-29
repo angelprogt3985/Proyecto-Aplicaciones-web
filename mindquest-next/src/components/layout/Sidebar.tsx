@@ -38,9 +38,11 @@ interface SidebarProps {
   activeSection: NavSection;
   onNavigate: (section: NavSection) => void;
   userGold: number;
+  userLevel?: number;
+  userName?: string;
 }
 
-export function Sidebar({ activeSection, onNavigate, userGold }: SidebarProps) {
+export function Sidebar({ activeSection, onNavigate, userGold, userLevel = 1, userName = "MindQuest" }: SidebarProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -62,8 +64,8 @@ export function Sidebar({ activeSection, onNavigate, userGold }: SidebarProps) {
           <Sparkles className="h-5 w-5 text-mq-bg" />
         </div>
         <div>
-          <p className="text-lg font-semibold text-mq-text tracking-wide">MindQuest</p>
-          <p className="text-xs text-mq-blue">Nivel 42 · Héroe</p>
+          <p className="text-lg font-semibold text-mq-text tracking-wide">{userName}</p>
+          <p className="text-xs text-mq-blue">Nivel {userLevel} · Héroe</p>
         </div>
       </div>
 
