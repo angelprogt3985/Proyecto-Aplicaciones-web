@@ -15,7 +15,7 @@ def consult_oracle(req: https_fn.Request) -> https_fn.Response:
     print(f"API key found: {api_key is not None}")
     print(f"API key length: {len(api_key) if api_key else 0}")
 
-    GEMINI_URL = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key={api_key}"
+    GEMINI_URL = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
 
     if req.method == "OPTIONS":
         headers = {
@@ -48,6 +48,7 @@ Hazaña del jugador: {user_message}
         "contents": [
             {"parts": [{"text": prompt}]}
         ]
+
     }
 
     gemini_response = requests.post(

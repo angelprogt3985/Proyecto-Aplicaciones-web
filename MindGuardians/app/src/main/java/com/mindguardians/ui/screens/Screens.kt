@@ -171,7 +171,7 @@ fun ShopScreen(vm: GameViewModel) {
                                 .background(Color.Black.copy(.35f))
                                 .border(1.dp, if (canAfford) PurpleNeon.copy(.25f) else Color.White.copy(.1f), RoundedCornerShape(16.dp))
                                 .then(if (canAfford && !isBlocked) Modifier.clickable {
-                                    vm.purchaseItem(item.id, item.name, item.stat, item.emoji, item.price)
+                                    vm.purchaseItem(item.id, item.name, item.stat, item.emoji, item.price, item.bonusHp, item.bonusPower)
                                 } else Modifier)
                                 .padding(16.dp),
                             contentAlignment = Alignment.Center,

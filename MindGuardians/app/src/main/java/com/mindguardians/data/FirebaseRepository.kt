@@ -12,6 +12,8 @@ data class ShopItemData(
     val name:  String,
     val stat:  String,
     val price: Int,
+    val bonusHp:    Int = 0,
+    val bonusPower: Int = 0,
 )
 
 // ── Modelo de ítem de inventario (con fecha de compra) ───────────────────────
@@ -22,27 +24,34 @@ data class InventoryItemData(
     val name:        String,
     val stat:        String,
     val price:       Int,
+    val bonusHp:     Int,
+    val bonusPower:  Int,
     val purchasedAt: com.google.firebase.Timestamp?,
 )
 
 
 class FirebaseRepository {
 
-    // ── Catálogo canónico — FUENTE ÚNICA DE VERDAD para app y web ────────────
-    val catalogItems: List<ShopItemData> = listOf(
-        ShopItemData("shop_01", "🗡️", "Espada del Amanecer", "+10% Daño Agua",  120),
-        ShopItemData("shop_02", "🛡️", "Escudo Estelar",      "+15 HP Máx.",     120),
-        ShopItemData("shop_03", "🪖", "Casco de Claridad",   "+20% Daño Mente", 180),
-        ShopItemData("shop_04", "👟", "Botas del Cosmos",    "+15% Postura",    150),
-        ShopItemData("shop_05", "💎", "Amuleto Galáctico",   "+5% Todo daño",   250),
-        ShopItemData("shop_06", "🔮", "Orbe del Oráculo",    "+2x bonif. IA",   300),
-    )
-
     private val auth = FirebaseAuth.getInstance()
     private val db   = FirebaseFirestore.getInstance()
 
     val currentUserId: String?
         get() = auth.currentUser?.uid
+
+    // Carga el catalogo de la tienda desde firebase
+    suspend fun loadShopCatalog(): List<ShopItemData> {
+        val snapshot = db.collection("shop_catalog").get().await()
+        return snapshot.documents.mapNotNull { doc ->
+            val id    = doc.id
+            val name  = doc.getString("name")  ?: return@mapNotNull null
+            val stat  = doc.getString("stat")  ?: doc.getString("description") ?: ""
+            val emoji = doc.getString("emoji") ?: ""
+            val price = (doc.getLong("price")  ?: 0).toInt()
+            val bonusHp    = (doc.getLong("bonusHp")    ?: 0).toInt()
+            val bonusPower = (doc.getLong("bonusPower") ?: 0).toInt()
+            ShopItemData(id, emoji, name, stat, price, bonusHp, bonusPower)
+        }
+    }
 
     suspend fun isDisplayNameTaken(displayName: String): Boolean {
         val snapshot = db.collection("users")
@@ -154,8 +163,10 @@ class FirebaseRepository {
             val stat  = doc.getString("stat")  ?: return@mapNotNull null
             val emoji = doc.getString("emoji") ?: "📦"
             val price = (doc.getLong("price") ?: 0).toInt()
+            val bonusHp    = (doc.getLong("bonusHp")    ?: 0).toInt()
+            val bonusPower = (doc.getLong("bonusPower") ?: 0).toInt()
             val ts    = doc.getTimestamp("purchasedAt")
-            InventoryItemData(doc.id, id, emoji, name, stat, price, ts)
+            InventoryItemData(doc.id, id, emoji, name, stat, price, bonusHp, bonusPower, ts)
         }
     }
 
@@ -165,6 +176,8 @@ class FirebaseRepository {
         itemName: String,
         itemStat: String,
         emoji:    String,
+        bonusHp:    Int = 0,
+        bonusPower: Int = 0,
     ): Boolean {
         val uid = currentUserId ?: return false
         val userRef  = db.collection("users").document(uid)
@@ -184,6 +197,8 @@ class FirebaseRepository {
                 "stat"        to itemStat,
                 "emoji"       to emoji,
                 "price"       to amount,
+                "bonusHp"     to bonusHp,
+                "bonusPower"  to bonusPower,
                 "purchasedAt" to com.google.firebase.Timestamp.now(),
             ))
             .await()
