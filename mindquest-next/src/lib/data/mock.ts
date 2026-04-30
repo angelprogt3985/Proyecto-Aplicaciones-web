@@ -85,14 +85,54 @@ export const MOCK_EQUIPMENT_SET: EquipmentSet = {
 // ─── Shop ─────────────────────────────────────────────────────────────────────
 
 export const MOCK_SHOP_ITEMS: ShopItem[] = [
-  { id: "s1", name: "Espada Estelar",    description: "Una espada forjada con fragmentos de estrellas",   price: 2500, category: "weapon",    rarity: "legendary", stats: { power: 120 },   iconName: "Sword"      },
-  { id: "s2", name: "Escudo Galáctico",  description: "Protección digna de un héroe espacial",            price: 2200, category: "armor",     rarity: "epic",      stats: { defense: 100 }, iconName: "Shield"     },
-  { id: "s3", name: "Amuleto de Energía",description: "Aumenta tu vitalidad considerablemente",           price: 1800, category: "accessory", rarity: "epic",      stats: { health: 200 },  iconName: "Heart"      },
-  { id: "s4", name: "Reliquia del Poder",description: "Potencia tus ataques con energía cósmica",        price: 3000, category: "accessory", rarity: "legendary", stats: { power: 90 },    iconName: "Zap"        },
-  { id: "s5", name: "Espada de Batalla", description: "Un arma confiable para cualquier aventurero",      price: 800,  category: "weapon",    rarity: "rare",      stats: { power: 70 },    iconName: "Sword"      },
-  { id: "s6", name: "Escudo Reforzado",  description: "Defensa sólida contra enemigos",                   price: 750,  category: "armor",     rarity: "rare",      stats: { defense: 65 },  iconName: "Shield"     },
-  { id: "s7", name: "Boost de XP",       description: "Duplica XP ganado por 24 horas",                  price: 500,  category: "boost",     rarity: "rare",      stats: {},               iconName: "TrendingUp" },
-  { id: "s8", name: "Boost de Oro",      description: "Aumenta oro ganado en un 50% por 24 horas",       price: 450,  category: "boost",     rarity: "rare",      stats: {},               iconName: "Award"      },
+  {
+    id: "shop_01", name: "Espada del Amanecer",
+    description: "+10% Daño Agua — forjada al primer rayo de sol",
+    price: 120, category: "weapon", rarity: "rare",
+    stats: { power: 10 }, iconName: "Sword", icon: null,
+    bonusHp: 0,
+    bonusPower: 0
+  },
+  {
+    id: "shop_02", name: "Escudo Estelar",
+    description: "+15 HP Máx. — protección estelar inquebrantable",
+    price: 120, category: "armor", rarity: "rare",
+    stats: { health: 15 }, iconName: "Shield", icon: null,
+    bonusHp: 0,
+    bonusPower: 0
+  },
+  {
+    id: "shop_03", name: "Casco de Claridad",
+    description: "+20% Daño Mente — despeja la niebla del estrés",
+    price: 180, category: "armor", rarity: "epic",
+    stats: { power: 20 }, iconName: "Star", icon: null,
+    bonusHp: 0,
+    bonusPower: 0
+  },
+  {
+    id: "shop_04", name: "Botas del Cosmos",
+    description: "+15% Daño Postura — velocidad cósmica",
+    price: 150, category: "armor", rarity: "rare",
+    stats: { defense: 15 }, iconName: "TrendingUp", icon: null,
+    bonusHp: 0,
+    bonusPower: 0
+  },
+  {
+    id: "shop_05", name: "Amuleto Galáctico",
+    description: "+5% Todo daño — poder del universo condensado",
+    price: 250, category: "accessory", rarity: "epic",
+    stats: { power: 5, defense: 5, health: 5 }, iconName: "Zap", icon: null,
+    bonusHp: 0,
+    bonusPower: 0
+  },
+  {
+    id: "shop_06", name: "Orbe del Oráculo",
+    description: "+2x bonif. IA — la sabiduría del cosmos amplificada",
+    price: 300, category: "accessory", rarity: "legendary",
+    stats: { power: 30 }, iconName: "Award", icon: null,
+    bonusHp: 0,
+    bonusPower: 0
+  },
 ];
 
 // ─── Ranking ──────────────────────────────────────────────────────────────────

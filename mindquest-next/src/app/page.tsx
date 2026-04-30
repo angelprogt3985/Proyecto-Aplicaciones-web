@@ -15,7 +15,8 @@ import { GoldShop }           from "@/components/shop/GoldShop";
 import { ProfileSection }     from "@/components/profile/ProfileSection";
 import { SettingsSection }    from "@/components/settings/SettingsSection";
 import {
-  loadUserData, loadBattles, loadRanking, spendGold, loadInventory, loadWeeklyVitality,
+  loadUserData, loadBattles, loadRanking, spendGold, loadInventory, loadWeeklyVitality, loadInventoryFull,
+  loadShopCatalog
 } from "@/lib/firestore";
 import { auth } from "@/lib/firebase";
 import {
@@ -33,6 +34,19 @@ const SECTION_TITLES: Record<NavSection, string> = {
   settings:  "Ajustes",
 };
 
+// Funcion auxiliar para calcular las bonificaciones de estadisticas del usuario
+function computeStatBonuses(ownedIds: string[]): { bonusHp: number; bonusPower: number } {
+  let bonusHp = 0;
+  let bonusPower = 0;
+  for (const item of MOCK_SHOP_ITEMS) {
+    if (ownedIds.includes(item.id)) {
+      bonusHp    += item.stats.health  ?? 0;
+      bonusPower += (item.stats.power ?? 0) + (item.stats.defense ?? 0);
+    }
+  }
+  return { bonusHp, bonusPower };
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<NavSection>("dashboard");
@@ -42,6 +56,7 @@ export default function DashboardPage() {
   const [vitalityStats, setVitalityStats] = useState<WeeklyVitalityStats>(MOCK_VITALITY);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [purchasedIds, setPurchasedIds]   = useState<string[]>([]);
+  const [shopItems, setShopItems]         = useState<ShopItem[]>([]);
 
   // Load vitality from Firestore and compute totals
   const refreshVitality = useCallback(async () => {
@@ -59,11 +74,12 @@ export default function DashboardPage() {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       if (!firebaseUser) { router.push("/login"); return; }
 
-      const [data, rawBattles, rawRanking, inventoryIds] = await Promise.all([
-        loadUserData(), loadBattles(), loadRanking(), loadInventory(),
+      const [data, rawBattles, rawRanking, inventoryIds, catalog] = await Promise.all([
+        loadUserData(), loadBattles(), loadRanking(), loadInventory(), loadShopCatalog(),
       ]);
 
       if (data) {
+        const { bonusHp, bonusPower } = computeStatBonuses(inventoryIds);
         setUser({
           ...MOCK_USER,
           id:          firebaseUser.uid,
@@ -72,7 +88,11 @@ export default function DashboardPage() {
           level:       data.heroLevel   ?? 1,
           xp:          data.heroXp      ?? 0,
           gold:        data.heroGold    ?? 0,
-          energy:      data.heroHp      ?? 100,
+          energy:      (data.heroHp ?? 100) + bonusHp,  // HP base + bonus de equipo
+          xpToNextLevel: 100,
+          isOnline:    true,
+          createdAt:   "",
+          heroClass:   "Guerrero",
         });
       }
 
@@ -109,15 +129,22 @@ export default function DashboardPage() {
   }, [router, refreshVitality]);
 
   async function handlePurchase(item: ShopItem) {
-    if (user.gold < item.price) return;
-    await spendGold(item.price, {
-      id: item.id, name: item.name, description: item.description,
-      category: item.category, rarity: item.rarity,
-      stats: item.stats as Record<string, number>, iconName: item.iconName,
-    });
-    setUser((prev) => ({ ...prev, gold: prev.gold - item.price }));
-    setPurchasedIds((prev) => [...prev, item.id]);
-  }
+  if (user.gold < item.price) return;
+  await spendGold(item.price, {
+    id: item.id, name: item.name, description: item.description,
+    category: item.category, rarity: item.rarity,
+    stats: item.stats as Record<string, number>, iconName: item.iconName,
+  });
+  const newPurchasedIds = [...purchasedIds, item.id];
+  const { bonusHp, bonusPower } = computeStatBonuses(newPurchasedIds);
+  void bonusPower;
+  setUser((prev) => ({
+    ...prev,
+    gold:   prev.gold - item.price,
+    energy: (prev.energy - (item.stats.health ?? 0)) + (item.stats.health ?? 0) * 2,
+  }));
+  setPurchasedIds(newPurchasedIds);
+}
 
   if (isLoadingUser) {
     return (

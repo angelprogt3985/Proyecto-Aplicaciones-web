@@ -96,6 +96,8 @@ export interface ShopItem {
   rarity: EquipmentRarity;
   stats: EquipmentStats;
   iconName: string;
+  bonusHp: number;
+  bonusPower: number;
 }
 
 // ─── Ranking ──────────────────────────────────────────────────────────────────

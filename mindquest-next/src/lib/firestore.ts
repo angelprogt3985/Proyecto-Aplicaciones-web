@@ -12,7 +12,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
-import { ShopItemCategory, EquipmentRarity } from "./types";
+import { ShopItem } from "./types";
 
 // Leer datos del usuario actual
 export async function loadUserData(): Promise<Record<string, any> | null> {
@@ -79,18 +79,30 @@ export async function loadBattles(): Promise<Record<string, any>[]> {
 }
 
 // Descontar oro del usuario al comprar en la tienda
-export async function spendGold(amount: number, p0: { id: string; name: string; description: string; category: ShopItemCategory; rarity: EquipmentRarity; stats: Record<string, number>; iconName: string; }): Promise<void> {
+export async function spendGold(
+  amount: number,
+  item: { id: string; name: string; description: string; category: string; rarity: string; stats: Record<string, number>; iconName: string }
+): Promise<void> {
   const uid = auth.currentUser?.uid;
   if (!uid) return;
 
   const userRef = doc(db, "users", uid);
-  const snap    = await getDoc(userRef);
+  const snap = await getDoc(userRef);
   if (!snap.exists()) return;
 
   const currentGold: number = snap.data().heroGold ?? 0;
   if (currentGold < amount) return;
 
   await updateDoc(userRef, { heroGold: currentGold - amount });
+
+  await addDoc(collection(db, "users", uid, "inventory"), {
+    id:          item.id,
+    name:        item.name,
+    stat:        item.description,
+    emoji:       "",
+    price:       amount,
+    purchasedAt: serverTimestamp(),
+  });
 }
 
 // Leer inventario del usuario
@@ -146,3 +158,42 @@ export async function loadWeeklyVitality(): Promise<VitalityEntry[]> {
   }
   return entries;
 }
+
+// Lee todos los documentos de shop_catalog y los convierte a ShopItem
+export async function loadShopCatalog(): Promise<ShopItem[]> {
+  const snap = await getDocs(collection(db, "shop_catalog"));
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      icon:       null,
+      id:         d.id,
+      name:       data.name        ?? "",
+      description: data.description ?? data.stat ?? "",
+      price:      data.price       ?? 0,
+      category:   data.category    ?? "accessory",
+      rarity:     data.rarity      ?? "common",
+      stats: {
+        power:   data.bonusPower > 0 ? data.bonusPower : undefined,
+        health:  data.bonusHp    > 0 ? data.bonusHp    : undefined,
+      },
+      iconName:   data.iconName    ?? "Sword",
+      bonusHp:    data.bonusHp     ?? 0,
+      bonusPower: data.bonusPower  ?? 0,
+    } as ShopItem;
+  });
+}
+
+// Carga el inventario actualizado del usuario
+export async function loadInventoryFull(): Promise<Array<{ id: string; name: string; stat: string; price: number }>> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return [];
+
+  const snap = await getDocs(collection(db, "users", uid, "inventory"));
+  return snap.docs.map((d) => ({
+    id:    d.data().id    as string,
+    name:  d.data().name  as string,
+    stat:  d.data().stat  as string,
+    price: d.data().price as number,
+  }));
+}
+
