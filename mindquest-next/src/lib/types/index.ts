@@ -125,14 +125,7 @@ export interface ChatMessage {
 
 // ─── UI State ─────────────────────────────────────────────────────────────────
 
-export type NavSection =
-  | "dashboard"
-  | "battles"
-  | "inventory"
-  | "oracle"
-  | "ranking"
-  | "profile"
-  | "settings";
+export type NavSection = "dashboard" | "battles" | "inventory" | "oracle" | "ranking" | "profile" | "settings" | "guide";
 
 export type HabitFilter = "Todos" | HabitType;
 export type DateFilter = "all" | string;

@@ -14,6 +14,7 @@ import { BattlesHistory }     from "@/components/battles/BattlesHistory";
 import { GoldShop }           from "@/components/shop/GoldShop";
 import { ProfileSection }     from "@/components/profile/ProfileSection";
 import { SettingsSection }    from "@/components/settings/SettingsSection";
+import { GuideSection }       from "@/components/guide/GuideSection"; 
 import {
   loadUserData, loadBattles, loadRanking, spendGold, loadInventory, loadWeeklyVitality, loadInventoryFull,
   loadShopCatalog
@@ -32,6 +33,8 @@ const SECTION_TITLES: Record<NavSection, string> = {
   ranking:   "Ranking",
   profile:   "Perfil",
   settings:  "Ajustes",
+  guide:     "Guía de Usuario",  
+
 };
 
 // Funcion auxiliar para calcular las bonificaciones de estadisticas del usuario
@@ -221,6 +224,8 @@ export default function DashboardPage() {
 
       case "settings":
         return <SettingsSection />;
+      case "guide":              
+        return <GuideSection />;
 
       default:
         return null;

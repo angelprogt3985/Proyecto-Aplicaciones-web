@@ -9,6 +9,7 @@ import {
   User,
   Settings,
   LogOut,
+  BookOpen,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { NavSection } from "@/lib/types";
@@ -28,6 +29,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "oracle",    label: "Oráculo",    icon: Sparkles         },
   { id: "ranking",   label: "Ranking",    icon: Crown            },
   { id: "profile",   label: "Perfil",     icon: User             },
+  { id: "guide",     label: "Guía",       icon: BookOpen         },  
 ];
 
 const BOTTOM_ITEMS: NavItem[] = [
