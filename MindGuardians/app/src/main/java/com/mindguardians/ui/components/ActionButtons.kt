@@ -28,19 +28,60 @@ data class AttackAction(
     val onClick: () -> Unit,
 )
 
+// Devuelve la lista de ataques apropiada para el tipo de monstruo dado
+fun attacksForMonster(
+    monsterType: String,
+    onWater:     () -> Unit,
+    onStretch:   () -> Unit,
+    onMind:      () -> Unit,
+    onSleep:     () -> Unit,
+    onBreath:    () -> Unit,
+): List<AttackAction> {
+    return when {
+        // Monstruos de tipo físico/gravedad — el movimiento y el agua son muy efectivos
+        monsterType.contains("Gravedad", ignoreCase = true) ||
+                monsterType.contains("Peso",     ignoreCase = true) -> listOf(
+            AttackAction("💧", "Hidratación Cósmica", "Beber Agua",        20, Color(0xFF0099CC), Color(0xFF006699), onClick = onWater),
+            AttackAction("🌟", "Salto Galáctico",     "Estirarse",         25, Color(0xFF6B21A8), Color(0xFF581C87), onClick = onStretch),
+            AttackAction("🌬️", "Aliento del Cosmos",  "Respirar profundo", 15, Color(0xFF0F766E), Color(0xFF0D5C55), onClick = onBreath),
+        )
+        // Monstruos de tipo mental/caos — la meditación y el sueño son muy efectivos
+        monsterType.contains("Caos",   ignoreCase = true) ||
+                monsterType.contains("Mental", ignoreCase = true) ||
+                monsterType.contains("Mente",  ignoreCase = true) -> listOf(
+            AttackAction("✨", "Zen Cósmico",         "Meditar",           30, Color(0xFFF59E0B), Color(0xFFD97706), textColor = Color.Black, onClick = onMind),
+            AttackAction("🌙", "Sueño Estelar",       "Descansar",         25, Color(0xFF4338CA), Color(0xFF3730A3), onClick = onSleep),
+            AttackAction("🌬️", "Aliento del Cosmos",  "Respirar profundo", 20, Color(0xFF0F766E), Color(0xFF0D5C55), onClick = onBreath),
+        )
+        // Monstruos de tipo vacío/energía — balance de todos los hábitos
+        monsterType.contains("Vacío",   ignoreCase = true) ||
+                monsterType.contains("Estelar", ignoreCase = true) ||
+                monsterType.contains("Energía", ignoreCase = true) -> listOf(
+            AttackAction("💧", "Hidratación Cósmica", "Beber Agua",  20, Color(0xFF0099CC), Color(0xFF006699), onClick = onWater),
+            AttackAction("✨", "Zen Cósmico",         "Meditar",     20, Color(0xFFF59E0B), Color(0xFFD97706), textColor = Color.Black, onClick = onMind),
+            AttackAction("🌙", "Sueño Estelar",       "Descansar",   20, Color(0xFF4338CA), Color(0xFF3730A3), onClick = onSleep),
+        )
+        // Monstruos oscuros/fuerza — el estiramiento y la meditación rompen su poder
+        monsterType.contains("Oscura", ignoreCase = true) ||
+                monsterType.contains("Fuerza", ignoreCase = true) -> listOf(
+            AttackAction("🌟", "Salto Galáctico",     "Estirarse",   25, Color(0xFF6B21A8), Color(0xFF581C87), onClick = onStretch),
+            AttackAction("✨", "Zen Cósmico",         "Meditar",     25, Color(0xFFF59E0B), Color(0xFFD97706), textColor = Color.Black, onClick = onMind),
+            AttackAction("💧", "Hidratación Cósmica", "Beber Agua",  15, Color(0xFF0099CC), Color(0xFF006699), onClick = onWater),
+        )
+        // Default — los 3 ataques clásicos para cualquier tipo no reconocido
+        else -> listOf(
+            AttackAction("💧", "Elixir Estelar",  "Beber Agua",  15, Color(0xFF0099CC), Color(0xFF006699), onClick = onWater),
+            AttackAction("🌟", "Salto Galáctico", "Estirarse",   20, Color(0xFF6B21A8), Color(0xFF581C87), onClick = onStretch),
+            AttackAction("✨", "Zen Cósmico",     "Meditar",     25, Color(0xFFF59E0B), Color(0xFFD97706), textColor = Color.Black, onClick = onMind),
+        )
+    }
+}
+
 @Composable
 fun ActionButtons(
-    onWaterAttack: () -> Unit,
-    onStretchAttack: () -> Unit,
-    onMindAttack: () -> Unit,
+    actions:  List<AttackAction>,
     disabled: Boolean,
 ) {
-    val actions = listOf(
-        AttackAction("💧", "Elixir Estelar",  "Beber Agua",  15, Color(0xFF0099CC), Color(0xFF006699), onClick = onWaterAttack),
-        AttackAction("🌟", "Salto Galáctico", "Estirarse",   20, Color(0xFF6B21A8), Color(0xFF581C87), onClick = onStretchAttack),
-        AttackAction("✨", "Zen Cósmico",     "Meditar",     25, Color(0xFFF59E0B), Color(0xFFD97706), textColor = Color.Black, onClick = onMindAttack),
-    )
-
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         actions.forEach { action ->
             AttackButton(action = action, disabled = disabled)

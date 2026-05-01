@@ -46,7 +46,9 @@ class GeminiRepository {
         val prompt = """Eres el Narrador épico de MindGuardians, un RPG de bienestar cósmico.
 El héroe usó "$heroAction" contra "$monsterName".
 El monstruo contraataca infligiendo $damage puntos de daño.
-Narra el contraataque en UNA frase épica (máximo 20 palabras). Sin comillas. Solo la frase."""
+Narra el contraataque en UNA frase épica (máximo 20 palabras). Sin comillas. Solo la frase.
+IMPORTANTE: No menciones bonificaciones, poderes extra, ni recompensas de ningún tipo. Solo narra el golpe del monstruo.
+"""
         val response = api.consult(OracleRequest(message = prompt))
         return response.reply ?: "$monsterName contraataca con fuerza oscura."
     }
@@ -61,7 +63,9 @@ Narra el contraataque en UNA frase épica (máximo 20 palabras). Sin comillas. S
         val bonusText = if (bonusActive) "El ataque lleva un bono de poder activo." else ""
         val prompt = """Eres el Narrador épico de MindGuardians, un RPG de bienestar cósmico.
 El héroe usa "$actionName" contra "$monsterName" (tipo: $monsterType) causando $damage de daño. $bonusText
-Narra el ataque en UNA frase épica que refleje si fue muy efectivo o apenas dañino según el tipo del enemigo (máximo 20 palabras). Sin comillas. Solo la frase."""
+Narra el ataque en UNA frase épica que refleje si fue muy efectivo o apenas dañino según el tipo del enemigo (máximo 20 palabras). Sin comillas. Solo la frase.
+IMPORTANTE: No menciones bonificaciones futuras, poderes adicionales, ni recompensas. Solo narra el golpe que acaba de ocurrir.
+"""
         val response = api.consult(OracleRequest(message = prompt))
         return response.reply ?: "¡$actionName golpea a $monsterName! -$damage HP."
     }

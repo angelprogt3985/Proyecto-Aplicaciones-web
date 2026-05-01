@@ -29,6 +29,7 @@ import com.mindguardians.ui.components.*
 import com.mindguardians.ui.screens.*
 import com.mindguardians.ui.theme.*
 import com.mindguardians.ui.screens.InventoryScreen
+import com.mindguardians.ui.components.attacksForMonster
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +53,7 @@ private val TABS = listOf(
     TabItem(Screen.RANKING,   "🏆",  "Ranking"),
     TabItem(Screen.ORACLE,    "✨",  "Oráculo"),
     TabItem(Screen.INVENTORY, "🎒",  "Inventario"),
+    TabItem(Screen.GUIDE,     "📖",  "Guía"),
     )
 
 // ─── FLUJO DE PANTALLAS AUTH ─────────────────────────────────────────────────
@@ -134,6 +136,7 @@ private fun GameScreen(
                     Screen.ORACLE    -> OracleScreen(vm)
                     Screen.COMBAT    -> CombatScreen(vm)
                     Screen.INVENTORY -> InventoryScreen(vm = vm)
+                    Screen.GUIDE     -> GuideScreen()
                 }
             }
 
@@ -311,6 +314,14 @@ fun AppFooter() {
 // ─── COMBAT SCREEN ───────────────────────────────────────────────────────────
 @Composable
 fun CombatScreen(vm: GameViewModel) {
+    val actions = attacksForMonster(
+        monsterType = vm.currentMonster.type,
+        onWater   = { vm.attack(20, "Hidratación Cósmica") },
+        onStretch = { vm.attack(25, "Salto Galáctico") },
+        onMind    = { vm.attack(30, "Zen Cósmico") },
+        onSleep   = { vm.attack(25, "Sueño Estelar") },
+        onBreath  = { vm.attack(15, "Aliento del Cosmos") },
+    )
     LazyColumn(
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -380,10 +391,8 @@ fun CombatScreen(vm: GameViewModel) {
         }
         item {
             ActionButtons(
-                onWaterAttack   = { vm.attack(15, "Supernova de Agua") },
-                onStretchAttack = { vm.attack(20, "Salto Galáctico") },
-                onMindAttack    = { vm.attack(25, "Zen Cósmico") },
-                disabled        = vm.isBusy || vm.monsterHp <= 0 || vm.isDefeat,
+                actions  = actions,
+                disabled = vm.isBusy || vm.monsterHp <= 0 || vm.isDefeat,
                 )
         }
         item {

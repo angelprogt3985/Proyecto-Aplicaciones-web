@@ -20,7 +20,7 @@ data class BattleMessage(val id: String, val text: String, val type: MessageType
 
 enum class MessageType { DAMAGE, REWARD, INFO }
 // INVENTORY es nuevo aquí ↓
-enum class Screen { COMBAT, DASHBOARD, SHOP, RANKING, ORACLE, INVENTORY }
+enum class Screen { COMBAT, DASHBOARD, SHOP, RANKING, ORACLE, INVENTORY, GUIDE }
 
 val MONSTERS = listOf(
     Monster("Titán del Sedentarismo", "Gravedad Pesada", 100),
@@ -93,8 +93,7 @@ class GameViewModel : ViewModel() {
 
 
     init {
-        loadUser()
-        loadInventory()
+        loadUserThenInventory()
         loadShopCatalog()
         loadRanking()
         oracleMessages.add(
@@ -113,15 +112,11 @@ class GameViewModel : ViewModel() {
         return Pair(hp, power)
     }
 
-    // Recalcula heroMaxHP según el equipo y ajusta heroHp si excede el nuevo máximo
-    private fun applyEquipmentBonuses() {
-        val (bonusHp, _) = computeStatBonuses()
-        heroMaxHP = 100 + bonusHp
-        if (heroHp > heroMaxHP) heroHp = heroMaxHP
-    }
 
-    private fun loadUser() {
+
+    private fun loadUserThenInventory() {
         viewModelScope.launch {
+            // 1. Cargar datos del héroe
             val data = repository.loadUserData()
             if (data != null) {
                 heroLevel = (data["heroLevel"] as? Long)?.toInt() ?: 1
@@ -131,22 +126,34 @@ class GameViewModel : ViewModel() {
                 val savedMaxHP = (data["heroMaxHP"] as? Long)?.toInt() ?: 100
                 heroMaxHP = savedMaxHP
                 heroHp    = ((data["heroHp"] as? Long)?.toInt() ?: savedMaxHP).coerceAtMost(heroMaxHP)
-                    // Prioridad: Firestore > Firebase Auth > fallback
                 val nameFromFirestore = (data["displayName"] as? String)?.takeIf { it.isNotBlank() }
-                val nameFromAuth = FirebaseAuth.getInstance().currentUser?.displayName?.takeIf { it.isNotBlank() }
+                val nameFromAuth      = FirebaseAuth.getInstance().currentUser?.displayName?.takeIf { it.isNotBlank() }
                 heroName = nameFromFirestore ?: nameFromAuth ?: "Guerrero"
             }
             isLoadingUser = false
-        }
-    }
 
-    private fun loadInventory() {
-        viewModelScope.launch {
-            val ids = repository.loadInventory()
+            // 2. Cargar inventario solo DESPUÉS de tener heroMaxHP correcto de Firestore
+            val ids   = repository.loadInventory()
+            val items = repository.loadFullInventory()
             purchasedIds.addAll(ids)
+            inventoryItems.addAll(items)
+
+            // 3. Ahora sí aplicar bonus del equipo encima del heroMaxHP ya restaurado
+            applyEquipmentBonuses()
             isLoadingShop = false
         }
     }
+
+    // Recalcula heroMaxHP según el equipo y ajusta heroHp si excede el nuevo máximo
+    private fun applyEquipmentBonuses() {
+        val (bonusHp, _) = computeStatBonuses()
+        val baseFromLevel = heroMaxHP - computeEquipmentHpBonus()
+        heroMaxHP = baseFromLevel + bonusHp
+        if (heroHp > heroMaxHP) heroHp = heroMaxHP
+    }
+
+    private fun computeEquipmentHpBonus(): Int = inventoryItems.sumOf { it.bonusHp }
+
 
     private fun loadShopCatalog() {
         viewModelScope.launch {
@@ -294,7 +301,7 @@ class GameViewModel : ViewModel() {
     }
 
     fun recoverAfterDefeat() {
-        heroHp    = 100
+        heroHp    = heroMaxHP
         isDefeat  = false
         monsterHp = currentMonster.maxHp
         viewModelScope.launch {
@@ -316,7 +323,10 @@ class GameViewModel : ViewModel() {
         heroXp   += xp
         heroHp    = heroMaxHP
         totalXp  += xp
-        if (heroXp >= 100) { heroLevel++; heroXp -= 100; heroMaxHP += 10}
+        if (heroXp >= 100) {
+            heroLevel++;
+            heroXp -= 100;
+            heroMaxHP += 10}
         isVictory = false
         viewModelScope.launch {
             repository.saveBattle(currentMonster.type, "Victoria", gold, xp)
@@ -328,9 +338,9 @@ class GameViewModel : ViewModel() {
                 heroLevel = heroLevel,
                 heroXp    = heroXp,
                 heroGold  = heroGold,
-                heroHp    = heroMaxHP,
                 totalXp   = heroXp + (heroLevel - 1) * 100,
                 heroMaxHP = heroMaxHP,
+                heroHp    = heroMaxHP,
             )
         }
     }
