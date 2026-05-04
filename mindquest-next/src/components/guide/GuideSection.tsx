@@ -17,32 +17,6 @@ export function GuideSection() {
         </p>
       </div>
 
-      {/* ── 1. ACCESO ── */}
-      <Section icon="🔐" title="Acceso a la Plataforma" subtitle="Cómo crear tu cuenta e iniciar sesión" color="gold">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card borderColor="border-mq-gold/25">
-            <h3 className="text-mq-gold font-semibold mb-4">Registrarse por primera vez</h3>
-            <Steps color="gold" items={[
-              { title: "Ingresa al sitio web", desc: "Abre la URL de WinniKnight. Serás redirigido a la pantalla de login automáticamente." },
-              { title: 'Haz clic en "Regístrate aquí"', desc: "Enlace al pie del formulario de inicio de sesión." },
-              { title: "Completa el formulario", desc: "Nombre de Héroe (único, visible en ranking), correo electrónico, y contraseña de mínimo 6 caracteres." },
-              { title: 'Presiona "Crear Cuenta"', desc: "Si todo está correcto, entrarás directo al dashboard. También puedes presionar Enter." },
-            ]} />
-          </Card>
-          <Card borderColor="border-mq-blue/25">
-            <h3 className="text-mq-blue font-semibold mb-4">Ya tengo cuenta — Iniciar sesión</h3>
-            <Steps color="blue" items={[
-              { title: "Ingresa tu correo", desc: "El mismo con el que creaste tu cuenta." },
-              { title: "Ingresa tu contraseña", desc: "Puedes presionar Enter para iniciar sin hacer clic." },
-              { title: 'Presiona "Iniciar Sesión"', desc: "El sistema cargará tus datos desde Firebase y te llevará al dashboard." },
-            ]} />
-            <Tip>
-              <strong>Errores comunes:</strong> "Correo o contraseña incorrectos" → revisa mayúsculas. "Demasiados intentos" → espera unos minutos.
-            </Tip>
-          </Card>
-        </div>
-      </Section>
-
       {/* ── 2. INTERFAZ ── */}
       <Section icon="🗺️" title="Interfaz Principal" subtitle="Las tres zonas de la pantalla" color="blue">
         <div className="flex flex-col gap-3">
