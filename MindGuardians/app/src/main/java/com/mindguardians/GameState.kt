@@ -351,7 +351,9 @@ class GameViewModel : ViewModel() {
         if (heroXp >= 100) {
             heroLevel++;
             heroXp -= 100;
-            heroMaxHP += 10}
+            heroMaxHP += 10
+            heroHp    = heroMaxHP
+        }
         isVictory = false
         viewModelScope.launch {
             repository.saveBattle(currentMonster.type, "Victoria", gold, xp)
