@@ -14,17 +14,17 @@ import { BattlesHistory }     from "@/components/battles/BattlesHistory";
 import { GoldShop }           from "@/components/shop/GoldShop";
 import { ProfileSection }     from "@/components/profile/ProfileSection";
 import { SettingsSection }    from "@/components/settings/SettingsSection";
-import { GuideSection }       from "@/components/guide/GuideSection"; 
+import { GuideSection }       from "@/components/guide/GuideSection";
 import {
-  loadUserData, loadBattles, loadRanking, spendGold, loadInventory, loadWeeklyVitality, loadInventoryFull,
-  loadShopCatalog
+  loadUserData, loadBattles, loadRanking, spendGold, loadInventory, loadWeeklyVitality,
+  loadShopCatalog,
 } from "@/lib/firestore";
 import { auth } from "@/lib/firebase";
+import type { HeroClass } from "@/lib/types";
 import {
   MOCK_USER, MOCK_VITALITY, MOCK_EQUIPMENT_SET, MOCK_SHOP_ITEMS, MOCK_ORACLE_MESSAGES,
 } from "@/lib/data/mock";
 
-// Section title map for TopBar
 const SECTION_TITLES: Record<NavSection, string> = {
   dashboard: "Dashboard",
   battles:   "Combates",
@@ -33,12 +33,11 @@ const SECTION_TITLES: Record<NavSection, string> = {
   ranking:   "Ranking",
   profile:   "Perfil",
   settings:  "Ajustes",
-  guide:     "Guía de Usuario",  
-
+  guide:     "Guía de Usuario",
 };
 
-// Funcion auxiliar para calcular las bonificaciones de estadisticas del usuario
 function computeStatBonuses(ownedIds: string[]): { bonusHp: number; bonusPower: number } {
+  if (!Array.isArray(ownedIds)) return { bonusHp: 0, bonusPower: 0 };
   let bonusHp = 0;
   let bonusPower = 0;
   for (const item of MOCK_SHOP_ITEMS) {
@@ -61,7 +60,6 @@ export default function DashboardPage() {
   const [purchasedIds, setPurchasedIds]   = useState<string[]>([]);
   const [shopItems, setShopItems]         = useState<ShopItem[]>([]);
 
-  // Load vitality from Firestore and compute totals
   const refreshVitality = useCallback(async () => {
     try {
       const entries = await loadWeeklyVitality();
@@ -81,21 +79,25 @@ export default function DashboardPage() {
         loadUserData(), loadBattles(), loadRanking(), loadInventory(), loadShopCatalog(),
       ]);
 
+      const safeInventoryIds = Array.isArray(inventoryIds) ? inventoryIds : [];
+
       if (data) {
-        const { bonusHp, bonusPower } = computeStatBonuses(inventoryIds);
+        const { bonusHp } = computeStatBonuses(safeInventoryIds);
         setUser({
           ...MOCK_USER,
-          id:          firebaseUser.uid,
-          username:    data.displayName ?? firebaseUser.email ?? "Guerrero",
-          displayName: data.displayName ?? "Guerrero",
-          level:       data.heroLevel   ?? 1,
-          xp:          data.heroXp      ?? 0,
-          gold:        data.heroGold    ?? 0,
-          energy:      (data.heroHp ?? 100) + bonusHp,  // HP base + bonus de equipo
+          id:            firebaseUser.uid,
+          username:      data.displayName ?? firebaseUser.email ?? "Guerrero",
+          displayName:   data.displayName ?? "Guerrero",
+          heroClass:     (data.heroClass  ?? "Guerrero") as HeroClass,
+          level:         data.heroLevel   ?? 1,
+          xp:            data.heroXp      ?? 0,
           xpToNextLevel: 100,
-          isOnline:    true,
-          createdAt:   "",
-          heroClass:   "Guerrero",
+          totalXp:       data.totalXp     ?? 0,
+          gold:          data.heroGold    ?? 0,
+          heroHp:        (data.heroHp    ?? 100) + bonusHp,
+          heroMaxHp:     (data.heroMaxHP ?? 100) + bonusHp,
+          isOnline:      true,
+          createdAt:     "",
         });
       }
 
@@ -123,7 +125,8 @@ export default function DashboardPage() {
         }))
       );
 
-      setPurchasedIds(inventoryIds);
+      setShopItems(catalog);
+      setPurchasedIds(safeInventoryIds);
       await refreshVitality();
       setIsLoadingUser(false);
     });
@@ -132,22 +135,18 @@ export default function DashboardPage() {
   }, [router, refreshVitality]);
 
   async function handlePurchase(item: ShopItem) {
-  if (user.gold < item.price) return;
-  await spendGold(item.price, {
-    id: item.id, name: item.name, description: item.description,
-    category: item.category, rarity: item.rarity,
-    stats: item.stats as Record<string, number>, iconName: item.iconName,
-  });
-  const newPurchasedIds = [...purchasedIds, item.id];
-  const { bonusHp, bonusPower } = computeStatBonuses(newPurchasedIds);
-  void bonusPower;
-  setUser((prev) => ({
-    ...prev,
-    gold:   prev.gold - item.price,
-    energy: (prev.energy - (item.stats.health ?? 0)) + (item.stats.health ?? 0) * 2,
-  }));
-  setPurchasedIds(newPurchasedIds);
-}
+    if (user.gold < item.price) return;
+    await spendGold(item.price, item);
+    const newPurchasedIds = [...purchasedIds, item.id];
+    const { bonusHp } = computeStatBonuses(newPurchasedIds);
+    setUser((prev) => ({
+      ...prev,
+      gold:      prev.gold - item.price,
+      heroHp:    prev.heroHp    + (item.bonusHp ?? 0),
+      heroMaxHp: prev.heroMaxHp + (item.bonusHp ?? 0),
+    }));
+    setPurchasedIds(newPurchasedIds);
+  }
 
   if (isLoadingUser) {
     return (
@@ -157,11 +156,9 @@ export default function DashboardPage() {
     );
   }
 
-  // Week battles (last 7 days)
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
   const weeklyBattles = battles.filter((b) => new Date(b.date) >= weekAgo).length;
 
-  // ─── Section renderer ──────────────────────────────────────────────────────
   function renderSection() {
     switch (activeSection) {
       case "dashboard":
@@ -179,14 +176,14 @@ export default function DashboardPage() {
             </div>
             <EquipmentInventory
               equipment={MOCK_SHOP_ITEMS.filter((i) => purchasedIds.includes(i.id)).map((i) => ({
-                id: i.id, name: i.name, type: i.category as "weapon"|"armor"|"accessory",
+                id: i.id, name: i.name, type: i.category as "weapon" | "armor" | "accessory",
                 rarity: i.rarity, stats: i.stats, locked: false, iconName: i.iconName,
               }))}
               activeSet={MOCK_EQUIPMENT_SET}
               totalSlots={12}
             />
             <BattlesHistory battles={battles} />
-            <GoldShop items={MOCK_SHOP_ITEMS} userGold={user.gold} onPurchase={handlePurchase} purchasedIds={purchasedIds} />
+            <GoldShop items={shopItems} userGold={user.gold} onPurchase={handlePurchase} purchasedIds={purchasedIds} />
           </>
         );
 
@@ -198,13 +195,13 @@ export default function DashboardPage() {
           <>
             <EquipmentInventory
               equipment={MOCK_SHOP_ITEMS.filter((i) => purchasedIds.includes(i.id)).map((i) => ({
-                id: i.id, name: i.name, type: i.category as "weapon"|"armor"|"accessory",
+                id: i.id, name: i.name, type: i.category as "weapon" | "armor" | "accessory",
                 rarity: i.rarity, stats: i.stats, locked: false, iconName: i.iconName,
               }))}
               activeSet={MOCK_EQUIPMENT_SET}
               totalSlots={12}
             />
-            <GoldShop items={MOCK_SHOP_ITEMS} userGold={user.gold} onPurchase={handlePurchase} purchasedIds={purchasedIds} />
+            <GoldShop items={shopItems} userGold={user.gold} onPurchase={handlePurchase} purchasedIds={purchasedIds} />
           </>
         );
 
@@ -224,7 +221,8 @@ export default function DashboardPage() {
 
       case "settings":
         return <SettingsSection />;
-      case "guide":              
+
+      case "guide":
         return <GuideSection />;
 
       default:
@@ -239,11 +237,16 @@ export default function DashboardPage() {
         <div className="absolute bottom-1/4 left-1/4 h-96 w-96 rounded-full bg-mq-gold opacity-[0.07] blur-[150px]" />
       </div>
 
-      <Sidebar activeSection={activeSection} onNavigate={setActiveSection} userGold={user.gold} userLevel={user.level} userName={user.displayName} />
+      <Sidebar
+        activeSection={activeSection}
+        onNavigate={setActiveSection}
+        userGold={user.gold}
+        userLevel={user.level}
+        userName={user.displayName}
+      />
 
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         <TopBar user={user} />
-
         <main className="flex-1 overflow-y-auto px-8 py-8">
           <div className="mx-auto flex max-w-[1600px] flex-col gap-7">
             {renderSection()}

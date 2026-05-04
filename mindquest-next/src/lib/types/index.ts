@@ -11,18 +11,20 @@ export type HeroClass =
   | "Paladín";
 
 export interface User {
-  id: string;
-  username: string;
-  displayName: string;
-  heroClass: HeroClass;
-  level: number;
-  xp: number;
+  id:           string;
+  username:     string;
+  displayName:  string;
+  heroClass:    HeroClass;
+  level:        number;
+  xp:           number;
   xpToNextLevel: number;
-  gold: number;
-  energy: number; // 0–100
-  avatarUrl?: string;
-  isOnline: boolean;
-  createdAt: string;
+  totalXp:      number;
+  gold:         number;
+  heroHp:       number;
+  heroMaxHp:    number;
+  avatarUrl?:   string;
+  isOnline:     boolean;
+  createdAt:    string;
 }
 
 // ─── Stats / Vitality ─────────────────────────────────────────────────────────

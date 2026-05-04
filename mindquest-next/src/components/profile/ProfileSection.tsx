@@ -24,14 +24,23 @@ export function ProfileSection({ user, onUserUpdated }: ProfileSectionProps) {
   const xpPercent = Math.min(100, Math.round((user.xp / user.xpToNextLevel) * 100));
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      await saveUserData({ heroLevel: user.level, heroXp: user.xp, heroGold: user.gold, heroHp: user.energy, totalXp: user.xp });
-      onUserUpdated?.({ displayName, heroClass });
-      setSaved(true); setEditing(false);
-      setTimeout(() => setSaved(false), 3000);
-    } catch { /* ignore */ } finally { setSaving(false); }
-  };
+  setSaving(true);
+  try {
+    await saveUserData({
+      heroLevel:   user.level,
+      heroXp:      user.xp,
+      heroGold:    user.gold,
+      heroHp:      user.heroHp,
+      totalXp:     user.totalXp,
+      displayName: displayName,
+      heroClass:   heroClass,
+    });
+    onUserUpdated?.({ displayName, heroClass });
+    setSaved(true);
+    setEditing(false);
+    setTimeout(() => setSaved(false), 3000);
+  } catch { /* ignore */ } finally { setSaving(false); }
+};
 
   return (
     <div className="flex flex-col gap-7">

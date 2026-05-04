@@ -25,15 +25,17 @@ export async function loadUserData(): Promise<Record<string, any> | null> {
 
 // Guardar o actualizar datos del héroe
 export async function saveUserData(data: {
-  heroLevel: number;
-  heroXp:    number;
-  heroGold:  number;
-  heroHp:    number;
-  totalXp:   number;
+  heroLevel:    number;
+  heroXp:       number;
+  heroGold:     number;
+  heroHp:       number;
+  totalXp:      number;
+  heroMaxHP?:   number;
+  displayName?: string;
+  heroClass?:   string;
 }): Promise<void> {
   const uid = auth.currentUser?.uid;
   if (!uid) return;
-
   await setDoc(doc(db, "users", uid), data, { merge: true });
 }
 

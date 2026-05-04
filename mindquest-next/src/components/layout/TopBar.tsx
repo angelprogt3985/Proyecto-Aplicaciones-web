@@ -30,27 +30,27 @@ export function TopBar({ user }: TopBarProps) {
       <div className="ml-6 flex items-center gap-4">
         {/* Quick stats pill */}
         <div className="flex items-center gap-4 rounded-xl border border-mq-blue/20 bg-mq-bg px-4 py-2">
-          {/* Energy */}
+          {/* HP */}
           <div>
-            <p className="text-[10px] text-mq-muted">Energía</p>
+            <p className="text-[10px] text-mq-muted">HP</p>
             <div className="mt-1 flex items-center gap-1.5">
               <div className="h-1.5 w-16 overflow-hidden rounded-full bg-mq-card2">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-mq-blue to-mq-blue2 transition-all"
-                  style={{ width: `${energyPct}%` }}
+                  style={{ width: `${Math.round((user.heroHp / Math.max(user.heroMaxHp, 1)) * 100)}%` }}
                 />
               </div>
-              <span className="text-[11px] text-mq-blue">{energyPct}%</span>
+              <span className="text-[11px] text-mq-blue">{user.heroHp}/{user.heroMaxHp}</span>
             </div>
           </div>
 
           <div className="h-8 w-px bg-mq-blue/20" />
 
-          {/* XP */}
+          {/* XP Total */}
           <div>
-            <p className="text-[10px] text-mq-muted">XP Diaria</p>
+            <p className="text-[10px] text-mq-muted">XP Total</p>
             <p className="mt-1 text-xs text-mq-text">
-              {user.xp.toLocaleString()} / {user.xpToNextLevel.toLocaleString()}
+              {user.totalXp.toLocaleString()}
             </p>
           </div>
         </div>

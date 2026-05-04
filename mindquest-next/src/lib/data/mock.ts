@@ -20,17 +20,19 @@ import type {
 // ─── Current User ─────────────────────────────────────────────────────────────
 
 export const MOCK_USER: User = {
-  id: "usr_001",
-  username: "aventurero",
-  displayName: "Aventurero",
-  heroClass: "Guerrero",
-  level: 42,
-  xp: 2450,
-  xpToNextLevel: 3000,
-  gold: 1250,
-  energy: 85,
-  isOnline: true,
-  createdAt: "2025-01-01T00:00:00Z",
+  id:            "mock-user",
+  username:      "Guerrero",
+  displayName:   "Guerrero",
+  heroClass:     "Guerrero",
+  level:         1,
+  xp:            0,
+  xpToNextLevel: 100,
+  totalXp:       0,
+  gold:          0,
+  heroHp:        100,
+  heroMaxHp:     100,
+  isOnline:      true,
+  createdAt:     "",
 };
 
 // ─── Vitality ─────────────────────────────────────────────────────────────────
