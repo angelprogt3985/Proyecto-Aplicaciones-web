@@ -139,6 +139,33 @@ class FirebaseRepository {
         return snapshot.documents.mapNotNull { it.data }
     }
 
+    suspend fun loadBattles(): List<BattleRecord> {
+        val uid = currentUserId ?: return emptyList()
+        val snapshot = db.collection("users").document(uid)
+            .collection("battles")
+            .orderBy("date", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(50)
+            .get()
+            .await()
+        return snapshot.documents.mapNotNull { doc ->
+            val ts = doc.getTimestamp("date") ?: return@mapNotNull null
+            val cal = java.util.Calendar.getInstance().apply { time = ts.toDate() }
+            val dateStr = "%04d-%02d-%02d".format(
+                cal.get(java.util.Calendar.YEAR),
+                cal.get(java.util.Calendar.MONTH) + 1,
+                cal.get(java.util.Calendar.DAY_OF_MONTH),
+            )
+            BattleRecord(
+                id         = doc.id,
+                date       = dateStr,
+                habitType  = doc.getString("habitType")          ?: "Combate",
+                result     = doc.getString("result")             ?: "Victoria",
+                goldEarned = (doc.getLong("goldEarned") ?: 0).toInt(),
+                xpEarned   = (doc.getLong("xpEarned")   ?: 0).toInt(),
+            )
+        }
+    }
+
     // ── Solo IDs (para filtrar ítems ya comprados en la tienda) ──────────────
     suspend fun loadInventory(): List<String> {
         val uid = currentUserId ?: return emptyList()

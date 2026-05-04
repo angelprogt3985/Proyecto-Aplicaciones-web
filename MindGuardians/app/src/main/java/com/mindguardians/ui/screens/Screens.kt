@@ -1,5 +1,11 @@
 package com.mindguardians.ui.screens
 
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,10 +39,70 @@ import java.util.Locale
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
 @Composable
-fun DashboardScreen(heroGold: Int, heroLevel: Int) {
-    val filters = listOf("Todos", "💧 Agua", "🌟 Postura", "✨ Mente")
-    val bars    = listOf(40, 70, 55, 85, 45, 30, 60)
-    val days    = listOf("Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Hoy")
+fun DashboardScreen(vm: GameViewModel) {
+    val allBattles = vm.battles
+    val filters    = listOf("Todos", "Gravedad Pesada", "Vacío Estelar", "Caos Cósmico")
+    var activeFilter by remember { mutableStateOf("Todos") }
+
+    // Filtrado por tipo de hábito
+    val filtered = remember(allBattles.toList(), activeFilter) {
+        if (activeFilter == "Todos") allBattles
+        else allBattles.filter { it.habitType == activeFilter }
+    }
+
+    // Conteos para las tarjetas de resumen
+    val totalBattles  = filtered.size
+    val victories     = filtered.count { it.result == "Victoria" }
+    val totalGold     = filtered.sumOf { it.goldEarned }
+    val totalXp       = filtered.sumOf { it.xpEarned }
+
+    // Barras del gráfico — combates por día en los últimos 7 días
+    val today    = java.util.Calendar.getInstance()
+    val weekDays = (6 downTo 0).map { offset ->
+        val cal = java.util.Calendar.getInstance()
+        cal.add(java.util.Calendar.DAY_OF_YEAR, -offset)
+        val dateStr = "%04d-%02d-%02d".format(
+            cal.get(java.util.Calendar.YEAR),
+            cal.get(java.util.Calendar.MONTH) + 1,
+            cal.get(java.util.Calendar.DAY_OF_MONTH),
+        )
+        val label = when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
+            java.util.Calendar.MONDAY    -> "Lu"
+            java.util.Calendar.TUESDAY   -> "Ma"
+            java.util.Calendar.WEDNESDAY -> "Mi"
+            java.util.Calendar.THURSDAY  -> "Ju"
+            java.util.Calendar.FRIDAY    -> "Vi"
+            java.util.Calendar.SATURDAY  -> "Sa"
+            java.util.Calendar.SUNDAY    -> "Do"
+            else -> "?"
+        }
+        val count = allBattles.count { it.date == dateStr }
+        Triple(label, count, offset == 0)
+    }
+    val maxCount = weekDays.maxOf { it.second }.coerceAtLeast(1)
+
+    // Formateo de fecha legible
+    fun formatDate(dateStr: String): String {
+        return try {
+            val parts = dateStr.split("-")
+            val months = listOf("","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic")
+            "${parts[2].toInt()} ${months[parts[1].toInt()]} ${parts[0]}"
+        } catch (e: Exception) { dateStr }
+    }
+
+    // Color por tipo de combate
+    fun habitColor(type: String): Color = when (type) {
+        "Gravedad Pesada" -> GreenNeon
+        "Vacío Estelar"   -> CyanNeon
+        "Caos Cósmico"    -> Color(0xFFEF4444)
+        else              -> PurpleNeon
+    }
+    fun habitEmoji(type: String): String = when (type) {
+        "Gravedad Pesada" -> "🌿"
+        "Vacío Estelar"   -> "⚡"
+        "Caos Cósmico"    -> "🔥"
+        else              -> "⚔️"
+    }
 
     Column(
         modifier = Modifier
@@ -47,58 +113,206 @@ fun DashboardScreen(heroGold: Int, heroLevel: Int) {
     ) {
         ScreenTitle(prefix = "Wellness ", prefixColor = CyanNeon, suffix = "Dashboard")
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Filtros por tipo
+        Row(
+            modifier            = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             filters.forEach { f ->
+                val active = activeFilter == f
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50.dp))
-                        .border(1.dp, PurpleNeon.copy(.4f), RoundedCornerShape(50.dp))
-                        .clickable { }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .background(if (active) PurpleNeon.copy(.2f) else Color.Transparent)
+                        .border(1.dp, PurpleNeon.copy(if (active) .8f else .4f), RoundedCornerShape(50.dp))
+                        .clickable { activeFilter = f }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
                 ) {
-                    Text(f, color = PurpleNeon, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        f,
+                        color      = if (active) PurpleNeon else PurpleNeon.copy(.6f),
+                        fontSize   = 12.sp,
+                        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                    )
                 }
             }
         }
 
+        // Tarjetas de resumen — mismas 4 métricas que la web
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatCard("142",              "Combates",   CyanNeon,    Modifier.weight(1f))
-                StatCard(heroGold.toString(), "Oro total",  GoldNeon,    Modifier.weight(1f))
+                StatCard(totalBattles.toString(),   "Combates",   CyanNeon,  Modifier.weight(1f))
+                StatCard(victories.toString(),      "Victorias",  GreenNeon, Modifier.weight(1f))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatCard("18",               "Racha días", PurpleLight, Modifier.weight(1f))
-                StatCard(heroLevel.toString(),"Nivel héroe",GreenNeon,  Modifier.weight(1f))
+                StatCard(totalGold.toString(),      "Oro Total",  GoldNeon,  Modifier.weight(1f))
+                StatCard(totalXp.toString(),        "XP Total",   PurpleLight, Modifier.weight(1f))
             }
         }
 
+        // Gráfico semanal con datos reales
         DarkCard {
             Column {
-                Text("⚔️ COMBATES ESTA SEMANA", color = Color.White.copy(.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(
+                    "⚔️ COMBATES ESTA SEMANA",
+                    color        = Color.White.copy(.5f),
+                    fontSize     = 11.sp,
+                    fontWeight   = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                )
                 Spacer(Modifier.height(12.dp))
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(90.dp),
-                    verticalAlignment = Alignment.Bottom,
+                    modifier              = Modifier.fillMaxWidth().height(90.dp),
+                    verticalAlignment     = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    bars.forEachIndexed { i, h ->
-                        val isToday = i == 6
+                    weekDays.forEach { (label, count, isToday) ->
+                        val heightFraction = count.toFloat() / maxCount
                         Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Bottom,
+                            modifier              = Modifier.weight(1f),
+                            horizontalAlignment   = Alignment.CenterHorizontally,
+                            verticalArrangement   = Arrangement.Bottom,
                         ) {
+                            if (count > 0) {
+                                Text(
+                                    count.toString(),
+                                    color    = if (isToday) CyanNeon else PurpleNeon.copy(.7f),
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Spacer(Modifier.height(2.dp))
+                            }
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height((h * .7f).dp)
+                                    // Mínimo 4dp para que se vea aunque count sea 0
+                                    .height((heightFraction * 70f).coerceAtLeast(4f).dp)
                                     .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                    .background(if (isToday) CyanNeon else PurpleNeon)
+                                    .background(
+                                        if (count == 0) Color.White.copy(.06f)
+                                        else if (isToday) CyanNeon
+                                        else PurpleNeon
+                                    ),
                             )
                             Spacer(Modifier.height(4.dp))
-                            Text(days[i], color = if (isToday) CyanNeon else Color.White.copy(.3f), fontSize = 9.sp)
+                            Text(
+                                label,
+                                color    = if (isToday) CyanNeon else Color.White.copy(.3f),
+                                fontSize = 9.sp,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Lista de combates
+        DarkCard {
+            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                Text(
+                    "HISTORIAL DE COMBATES",
+                    color         = Color.White.copy(.5f),
+                    fontSize      = 11.sp,
+                    fontWeight    = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                )
+                Spacer(Modifier.height(12.dp))
+
+                if (vm.isLoadingBattles) {
+                    Box(
+                        modifier            = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+                        contentAlignment    = Alignment.Center,
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier    = Modifier.size(24.dp),
+                            color       = CyanNeon,
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                } else if (filtered.isEmpty()) {
+                    Box(
+                        modifier            = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+                        contentAlignment    = Alignment.Center,
+                    ) {
+                        Text(
+                            "No hay combates registrados aún.",
+                            color    = Color.White.copy(.3f),
+                            fontSize = 13.sp,
+                        )
+                    }
+                } else {
+                    filtered.forEach { battle ->
+                        val color = habitColor(battle.habitType)
+                        val emoji = habitEmoji(battle.habitType)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp)
+                                .border(
+                                    width  = 0.dp,
+                                    color  = Color.Transparent,
+                                    shape  = RoundedCornerShape(0.dp),
+                                ),
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            // Emoji del tipo
+                            Box(
+                                modifier         = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(color.copy(.12f))
+                                    .border(1.dp, color.copy(.3f), RoundedCornerShape(10.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(emoji, fontSize = 16.sp)
+                            }
+                            // Tipo y fecha
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    battle.habitType,
+                                    color      = color,
+                                    fontSize   = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    formatDate(battle.date),
+                                    color    = Color.White.copy(.3f),
+                                    fontSize = 10.sp,
+                                )
+                            }
+                            // Resultado
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50.dp))
+                                    .background(
+                                        if (battle.result == "Victoria") CyanNeon.copy(.12f)
+                                        else Color(0xFFEF4444).copy(.12f)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (battle.result == "Victoria") CyanNeon.copy(.4f)
+                                        else Color(0xFFEF4444).copy(.4f),
+                                        RoundedCornerShape(50.dp),
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                            ) {
+                                Text(
+                                    battle.result,
+                                    color      = if (battle.result == "Victoria") CyanNeon else Color(0xFFEF4444),
+                                    fontSize   = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                            // Recompensas
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("🪙 +${battle.goldEarned}", color = GoldNeon,   fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text("+${battle.xpEarned} XP",   color = PurpleLight, fontSize = 10.sp)
+                            }
+                        }
+                        // Separador entre filas (excepto la última)
+                        if (battle != filtered.last()) {
+                            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(.05f)))
                         }
                     }
                 }

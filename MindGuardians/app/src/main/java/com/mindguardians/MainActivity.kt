@@ -130,7 +130,7 @@ private fun GameScreen(
             // ── CONTENIDO ────────────────────────────────────────────────
             Box(modifier = Modifier.weight(1f)) {
                 when (vm.currentScreen) {
-                    Screen.DASHBOARD -> DashboardScreen(vm.heroGold, vm.heroLevel)
+                    Screen.DASHBOARD -> DashboardScreen(vm = vm)
                     Screen.SHOP      -> ShopScreen(vm = vm)
                     Screen.RANKING   -> RankingScreen(vm = vm)
                     Screen.ORACLE    -> OracleScreen(vm)

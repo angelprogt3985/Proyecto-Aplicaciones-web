@@ -32,6 +32,8 @@ class GameViewModel : ViewModel() {
 
     private val repository       = FirebaseRepository()
     private val geminiRepository = GeminiRepository()
+    var battles          = mutableStateListOf<com.mindguardians.data.BattleRecord>()
+    var isLoadingBattles by mutableStateOf(true)
 
     var heroHp    by mutableIntStateOf(100)
     var heroLevel by mutableIntStateOf(1)
@@ -99,6 +101,7 @@ class GameViewModel : ViewModel() {
         oracleMessages.add(
             Pair("oracle", "¡Salve, Guerrero Estelar! El cosmos observa tu jornada. ¿Qué hazañas de salud has realizado hoy?")
         )
+        loadBattles()
     }
 
     // Suma bonusHp y bonusPower de todos los ítems actualmente en inventoryItems
@@ -152,6 +155,15 @@ class GameViewModel : ViewModel() {
         if (heroHp > heroMaxHP) heroHp = heroMaxHP
     }
 
+    fun loadBattles() {
+        viewModelScope.launch {
+            val data = repository.loadBattles()
+            battles.clear()
+            battles.addAll(data)
+            isLoadingBattles = false
+        }
+    }
+
     private fun computeEquipmentHpBonus(): Int = inventoryItems.sumOf { it.bonusHp }
 
 
@@ -172,6 +184,13 @@ class GameViewModel : ViewModel() {
             inventoryItems.addAll(items)
             applyEquipmentBonuses()
             isLoadingInventory = false
+        }
+    }
+    fun refreshBattles() {
+        viewModelScope.launch {
+            val data = repository.loadBattles()
+            battles.clear()
+            battles.addAll(data)
         }
     }
 
