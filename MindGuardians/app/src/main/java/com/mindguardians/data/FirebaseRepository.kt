@@ -89,15 +89,17 @@ class FirebaseRepository {
     }
 
     suspend fun saveUserData(
-        heroLevel: Int,
-        heroXp:    Int,
-        heroGold:  Int,
-        heroHp:    Int,
-        totalXp:   Int,
-        heroMaxHP: Int,
+        heroLevel:   Int,
+        heroXp:      Int,
+        heroGold:    Int,
+        heroHp:      Int,
+        totalXp:     Int,
+        heroMaxHP:   Int,
+        displayName: String? = null,
+        heroClass:   String? = null,
     ) {
         val uid = currentUserId ?: return
-        val data = mapOf(
+        val data = mutableMapOf<String, Any>(
             "heroLevel" to heroLevel,
             "heroXp"    to heroXp,
             "heroGold"  to heroGold,
@@ -105,6 +107,9 @@ class FirebaseRepository {
             "totalXp"   to totalXp,
             "heroMaxHP" to heroMaxHP,
         )
+        // Solo incluir si se pasaron explícitamente
+        if (displayName != null) data["displayName"] = displayName
+        if (heroClass   != null) data["heroClass"]   = heroClass
         db.collection("users").document(uid)
             .set(data, SetOptions.merge())
             .await()

@@ -54,7 +54,11 @@ private val TABS = listOf(
     TabItem(Screen.ORACLE,    "✨",  "Oráculo"),
     TabItem(Screen.INVENTORY, "🎒",  "Inventario"),
     TabItem(Screen.GUIDE,     "📖",  "Guía"),
+    TabItem(Screen.PROFILE, "👤", "Perfil"),
+
     )
+
+
 
 // ─── FLUJO DE PANTALLAS AUTH ─────────────────────────────────────────────────
 private enum class AuthScreen { LOGIN, REGISTER }
@@ -137,6 +141,7 @@ private fun GameScreen(
                     Screen.COMBAT    -> CombatScreen(vm)
                     Screen.INVENTORY -> InventoryScreen(vm = vm)
                     Screen.GUIDE     -> GuideScreen()
+                    Screen.PROFILE -> ProfileScreen(vm = vm)
                 }
             }
 

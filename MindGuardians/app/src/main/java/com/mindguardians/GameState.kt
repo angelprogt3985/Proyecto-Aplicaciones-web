@@ -20,7 +20,9 @@ data class BattleMessage(val id: String, val text: String, val type: MessageType
 
 enum class MessageType { DAMAGE, REWARD, INFO }
 // INVENTORY es nuevo aquí ↓
-enum class Screen { COMBAT, DASHBOARD, SHOP, RANKING, ORACLE, INVENTORY, GUIDE }
+enum class Screen { COMBAT, DASHBOARD, SHOP, RANKING, ORACLE, INVENTORY, GUIDE, PROFILE }
+
+
 
 val MONSTERS = listOf(
     Monster("Titán del Sedentarismo", "Gravedad Pesada", 100),
@@ -47,6 +49,8 @@ class GameViewModel : ViewModel() {
         FirebaseAuth.getInstance().currentUser?.displayName
             ?.takeIf { it.isNotBlank() } ?: "Guerrero"
     )
+    var heroClass by mutableStateOf("Guerrero")
+
 
     private val monsterQueue = mutableStateListOf<Monster>().also { it.addAll(MONSTERS) }
 
@@ -132,6 +136,8 @@ class GameViewModel : ViewModel() {
                 val nameFromFirestore = (data["displayName"] as? String)?.takeIf { it.isNotBlank() }
                 val nameFromAuth      = FirebaseAuth.getInstance().currentUser?.displayName?.takeIf { it.isNotBlank() }
                 heroName = nameFromFirestore ?: nameFromAuth ?: "Guerrero"
+                heroClass = (data["heroClass"] as? String)?.takeIf { it.isNotBlank() } ?: "Guerrero"
+
             }
             isLoadingUser = false
 
@@ -399,6 +405,23 @@ class GameViewModel : ViewModel() {
             addLog("¡$bossName acecha en el horizonte!", MessageType.INFO)
             reportText  = ""
             isReporting = false
+        }
+    }
+    fun saveProfile(newName: String, newClass: String) {
+        if (newName.isBlank()) return
+        viewModelScope.launch {
+            repository.saveUserData(
+                heroLevel   = heroLevel,
+                heroXp      = heroXp,
+                heroGold    = heroGold,
+                heroHp      = heroHp,
+                totalXp     = totalXp,
+                heroMaxHP   = heroMaxHP,
+                displayName = newName,
+                heroClass   = newClass,
+            )
+            heroName  = newName
+            heroClass = newClass
         }
     }
 }
